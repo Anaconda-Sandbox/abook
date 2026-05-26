@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25", "hatch-vcs>=0.4"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentnote"
+name = "abook"
 dynamic = ["version"]
 description = "Eval: does a notebook substrate lift a coding agent?"
 readme = "README.md"
@@ -11,7 +11,10 @@ license = { text = "Apache-2.0" }
 requires-python = ">=3.10,<3.14"
 authors = [{ name = "Anaconda, Inc." }]
 
-dependencies = []
+dependencies = [
+    "matplotlib>=3.10.9",
+    "numpy>=2.2.6",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -27,14 +30,14 @@ dev = [
 exclude = ["tests/**", ".github/**", "Makefile"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentnote"]
+packages = ["src/abook"]
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/agentnote",
+    "src/abook",
     "pyproject.toml",
     "README.md",
 ]
@@ -59,7 +62,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["agentnote"]
+known-first-party = ["abook"]
 
 [tool.ruff.format]
 quote-style = "double"
