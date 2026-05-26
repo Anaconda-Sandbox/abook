@@ -1,4 +1,4 @@
-# agentnote
+# abook
 
 **Does a notebook substrate lift a coding agent?** An evaluation.
 
