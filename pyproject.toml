@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25", "hatch-vcs>=0.4"]
 build-backend = "hatchling.build"
 
 [project]
-name = "abook"
+name = "agentbook"
 dynamic = ["version"]
 description = "A self-evolving notebook — eval and improvement as one loop."
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-abook-fix = "abook.notebook_fix:main"
+agentbook-fix = "agentbook.notebook_fix:main"
 
 [project.optional-dependencies]
 dev = [
@@ -34,14 +34,14 @@ dev = [
 exclude = ["tests/**", ".github/**", "Makefile"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/abook"]
+packages = ["src/agentbook"]
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/abook",
+    "src/agentbook",
     "pyproject.toml",
     "README.md",
 ]
@@ -71,7 +71,7 @@ ignore = [
 "*.ipynb" = ["E402"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["abook"]
+known-first-party = ["agentbook"]
 
 [tool.ruff.format]
 quote-style = "double"

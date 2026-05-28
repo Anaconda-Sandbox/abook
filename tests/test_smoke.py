@@ -1,5 +1,5 @@
-import abook
+import agentbook
 
 
 def test_package_importable() -> None:
-    assert abook is not None
+    assert agentbook is not None

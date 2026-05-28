@@ -4,7 +4,7 @@ The eval-improve loop's edit step often hands back a `.ipynb` that is
 *syntactically* valid but messy in the small ways ruff catches: dangling
 imports, single-char loop variables, lambdas where a `def` would do,
 missing `strict=` on `zip`. This module exposes a single function that
-normalizes such a notebook in place, plus a `abook-fix` CLI for the
+normalizes such a notebook in place, plus a `agentbook-fix` CLI for the
 same.
 
 Designed to be called as the **post-edit hygiene step** of the loop:
@@ -118,9 +118,9 @@ def repair_notebook(path: str | Path) -> RepairReport:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """`abook-fix` CLI entry point. Returns process exit code."""
+    """`agentbook-fix` CLI entry point. Returns process exit code."""
     parser = argparse.ArgumentParser(
-        prog="abook-fix",
+        prog="agentbook-fix",
         description="Repair LLM-generated Jupyter notebooks (ruff lint + format).",
     )
     parser.add_argument(
