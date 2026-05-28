@@ -4,7 +4,7 @@ CONDA    ?= conda
 
 PYTHON ?= $(CONDA) run --no-capture-output -p $(ENV_NAME) python
 PIP := $(PYTHON) -m pip
-PROJECT := abook
+PROJECT := agentbook
 DIST_DIR := dist
 BUILD_DIR := build
 
@@ -72,7 +72,7 @@ test: ## Run tests with pytest
 	$(PYTEST) -s -vvv $(ARGS)
 
 test-coverage: ## Run tests with coverage report
-	$(PYTEST) --cov=abook --cov-report=html --cov-report=term $(ARGS)
+	$(PYTEST) --cov=agentbook --cov-report=html --cov-report=term $(ARGS)
 
 ruff: ## Run Ruff checks (no changes)
 	$(RUFF) check $(RUFF_SRCS) $(ARGS)

@@ -1,4 +1,4 @@
-# abook — a self-evolving notebook
+# agentbook — self-improving notebooks for agents
 ### evaluation + improvement in one loop, driven live over nteract MCP
 
 > **Evaluation and improvement are one loop.**

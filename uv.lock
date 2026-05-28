@@ -7,7 +7,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "abook"
+name = "agentbook"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
