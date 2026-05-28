@@ -14,7 +14,11 @@ authors = [{ name = "Anaconda, Inc." }]
 dependencies = [
     "matplotlib>=3.10.9",
     "numpy>=2.2.6",
+    "ruff>=0.15.0",
 ]
+
+[project.scripts]
+abook-fix = "abook.notebook_fix:main"
 
 [project.optional-dependencies]
 dev = [
@@ -60,6 +64,11 @@ select = [
 ignore = [
     "E501",  # line too long, handled by formatter
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebook cells legitimately interleave imports with code
+# (manage_dependencies / setup blocks before the actual imports).
+"*.ipynb" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["abook"]
