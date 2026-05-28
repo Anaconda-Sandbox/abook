@@ -115,3 +115,6 @@ cython_debug/
 # harbor trial artifacts (large, regenerable)
 runs/
 trials/
+
+# transient GEPA run output (notebook 07)
+_gepa_run_*/

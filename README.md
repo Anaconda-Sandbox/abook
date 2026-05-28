@@ -1,65 +1,116 @@
-# abook
+# abook — a self-evolving notebook: evaluation + improvement in one loop
 
-**Does a notebook substrate lift a coding agent?** An evaluation.
+> **Evaluation and improvement are one loop.**
+> Eval without improvement has no value. Improvement without eval has no measurement.
 
-A coding agent works with `Bash`, `Read`, `Edit`, `Write`. A notebook adds two
-things on top of that: a **persistent stateful REPL** and a **visual feedback
-channel**. This repo measures whether either one *lifts* the agent — improves
-task success, lowers cost, or keeps a human able to supervise it.
+A notebook hosts the state of an agent's behavior — its eval set, its
+trace history, its best-so-far artifact — and that same notebook hosts
+the agent doing the next improvement. The two halves of the loop live
+in the same kernel namespace. That's what "self-evolving" means here:
+not that the notebook edits itself, but that the *thing it operates
+on* — prompt, skill document, code, agent architecture, config —
+gets edited based on what just got measured, in cells one tab apart.
 
-## The two questions
+## The loop
 
-A notebook, stripped to what is not just files, is *a REPL whose outputs render
-into a visual channel*. So the eval tests exactly two things — nothing else.
+```
+    rollout ──► score ──► reflect ──► edit ──► re-evaluate
+        ▲                                              │
+        └──────────────────────────────────────────────┘
+```
 
-### Q1 — Does the persistent REPL lift the agent? (statefulness)
+Four operations, none of them notebook-native by themselves. What a
+notebook supplies is **coupling**: rollout outputs land in DataFrames
+the reflect step slices; the edit step writes a new artifact the
+re-evaluate step picks up without a process restart; convergence plots
+update inline while the loop is alive.
 
-Does a live stateful kernel — variables, imports, loaded models surviving across
-calls — measurably lift a coding agent over a stateless `Bash`/`Read`/`Edit`
-baseline? Measured on stateful-compute tasks, with a negative-control tier to
-falsify a universal-lift claim.
+## Two real instances of the loop
 
-### Q2 — Does visual feedback lift the loop? (rich display)
-
-Does rendered output — plots, images, tables — lift the work, for two audiences:
-
-- **(2a) the AI** — rendered output forwarded into the model's vision channel,
-  closing a see-then-act loop.
-- **(2b) the human in the loop — primary** — a notebook is a shared visual
-  surface. A terminal agent emits walls of text and the human falls out of the
-  loop; a notebook emits artifacts a human can glance at, stay oriented, and
-  intervene. This is an oversight/adoption value, measured with a human-facing
-  metric (review time, intervention rate, stated trust), not a task score.
-
-## Decided architecture (settled, not under test)
-
-For an agent, a notebook = a **filesystem companion** + a **kernel CLI**:
-
-- **Document plane** — the notebook is a directory of flat cell files
-  (`cells/0002.py`); the agent edits it with native `Read`/`Edit`/`Write`/`ls`.
-  ~12 of nteract's 20 MCP tools just duplicate the filesystem; they are dropped.
-- **Kernel plane** — a thin CLI (~6 process verbs: `exec`, `results`, `run-all`,
-  `status`, `interrupt`, `restart`) drives the live kernel.
-
-Only the *kernel* and the *visual feedback* are irreducibly "notebook"; the
-document plane is the filesystem. The eval spends its budget only on what is
-genuinely under test.
-
-## Eval design
-
-`harbor` harness, three arms, stateful-compute task set with a negative control:
-
-| Arm | Substrate |
+| Library | What gets evolved |
 |---|---|
-| Stateless baseline | coding agent, default tools, no kernel |
-| nteract | imperative + stateful Jupyter kernel |
-| marimo | reactive notebook — deterministic DAG, no hidden-state hazard |
+| [`gepa`](https://github.com/gepa-ai/gepa) — Genetic-Pareto reflective prompt optimization (ICLR 2026 Oral) | a system prompt |
+| [`SkillOpt`](https://github.com/microsoft/SkillOpt) — natural-language skill document as trainable artifact (Microsoft Research) | a skill markdown |
 
-Lead with **cost-normalized success** (success per dollar). Report 95% CIs —
-N is small. Use a human-facing measure for Q2b.
+Both libraries are independent. Both run their full
+rollout–reflect–edit–gate loop. GEPA is kernel-native by design (the
+optimizer object holds state in Python); SkillOpt is batch-trainer-
+native (state lives on disk) but still benefits from kernel-resident
+config composition and post-hoc trajectory EDA.
+
+## Why the loop wants a notebook
+
+1. **Persistent state.** The eval set loads once. The best-so-far
+   artifact stays in scope. The reflection LM's API client stays
+   warm. A subprocess loop pays this tax every iteration; a kernel
+   loop pays it once.
+
+2. **Coupled introspection.** When the optimizer fails to improve,
+   the failed trace is a DataFrame slice away — not a JSON file to
+   re-parse with another script. The improvement step reads the same
+   object the eval step produced.
+
+3. **Visible artifacts.** The thing under evolution — a prompt diff,
+   an SVG, a Pareto frontier — renders inline. The human in the loop
+   glances at the artifact between rounds without standing up a
+   dashboard.
+
+4. **One vocabulary.** Eval and improvement use the same Python, the
+   same DataFrame library, the same model client. A notebook collapses
+   what is conventionally two separate codebases into one cell-by-cell
+   flow.
+
+## The nteract substrate — three repos that make the loop tractable
+
+The notebook half of the story is not one program. The
+[`nteract`](https://github.com/nteract) organization ships a modular
+suite of libraries built around React and programmatic execution.
+Three of them, together, are how an eval ↔ improve loop is wired in
+practice:
+
+### 1. [`nteract/nteract`](https://github.com/nteract/nteract) — the core repo
+
+A monolithic repository containing the nteract desktop application
+(Electron + React) and a large collection of SDK packages. Unlike
+JupyterLab — which runs in the browser via a Python server — nteract
+provides a native desktop experience focused on UX, rich data
+visualization, and dropping the complexity of managing hidden kernel
+state. This is the substrate the *live* loop runs on when a human is
+watching: the cell that just produced a score is one click away from
+the cell that proposes the next mutation.
+
+### 2. [`nteract/papermill`](https://github.com/nteract/papermill) — the automation engine
+
+A tool for parameterizing and executing Jupyter notebooks
+programmatically. **The most critical repo in the org for an
+eval-improve loop.** Instead of an agent manually "typing" into a live
+notebook cell, papermill treats the notebook like an API: pass a JSON
+payload of the eval dataset in as parameters, papermill executes the
+notebook headlessly in the background, and outputs a new notebook
+containing the scores and trace logs. The loop becomes:
+*propose mutation → papermill executes the eval notebook with the
+mutation → harvest scores → reflect → propose next mutation.* The
+notebook is both the experiment definition and the eval harness.
+
+### 3. [`nteract/scrapbook`](https://github.com/nteract/scrapbook) — structured outputs
+
+A library for recording and reading data ("scraps") from Jupyter
+notebooks. When papermill finishes running an evaluation notebook,
+the improvement step uses scrapbook to extract visual charts (e.g. a
+matplotlib of token efficiency) or pandas DataFrames **without
+parsing the raw `.ipynb` JSON by hand**. That is what closes the loop
+mechanically: the eval notebook records `glue("score", 0.73)` and the
+improvement notebook reads `nb.scraps["score"]` — a typed channel
+between the two halves.
+
+Together: **nteract** is where the live loop lives, **papermill** is
+how you run N copies of it in batch, **scrapbook** is how the next
+round reads what the last one produced. Each one is independently
+useful; together they collapse the eval-improve split that scripts
+usually enforce.
 
 ## Status
 
-Bootstrapping. Next: wire the filesystem-companion baseline + kernel CLI into a
-harbor trial; build the Q2 task set + human-supervision protocol; verify image
-passthrough into the vision channel.
+Early. The thesis is staked; the substrate is named; the loop runs on
+two real optimizers. What it becomes from here is what gets evolved
+next.
