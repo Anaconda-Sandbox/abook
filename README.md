@@ -72,11 +72,12 @@ subprocess invocations.
 That's what [`nteract/nteract`](https://github.com/nteract/nteract)
 gives you: a desktop + kernel substrate built around React and rich
 programmatic execution, paired with an MCP server (`runt`) that
-exposes notebook operations as tool calls. The 17 demo notebooks in
-this repo were built and driven against exactly that MCP — every
-cell was created, executed, and re-read through `mcp__runt__*` tools
-by an agent inside Claude Code. The eval notebook isn't a file you
-hand to a subprocess; it's a kernel session the agent is *inside*.
+exposes notebook operations as tool calls. The demo notebooks in
+this repo (still a work in progress) are being built and driven
+against exactly that MCP — every cell created, executed, and re-read
+through `mcp__runt__*` tools by an agent inside Claude Code. The eval
+notebook isn't a file you hand to a subprocess; it's a kernel session
+the agent is *inside*.
 
 ### When you'd reach for `nteract/papermill` instead
 
@@ -93,7 +94,7 @@ cases where you can't or don't want either:
 parametrizes and executes notebooks headlessly: same notebook, no
 live kernel, runs as a plain Python subprocess. The right wiring when
 you want N parallel evaluations or when the improvement step is
-itself a separate service. The 17 notebooks here don't use it
+itself a separate service. The demo notebooks here don't use it
 because the demo is interactive — but at scale, a serious
 eval-improve loop usually runs both substrates side by side: MCP for
 iteration, papermill for sweeps.
