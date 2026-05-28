@@ -79,25 +79,15 @@ through `mcp__runt__*` tools by an agent inside Claude Code. The eval
 notebook isn't a file you hand to a subprocess; it's a kernel session
 the agent is *inside*.
 
-### When you'd reach for `nteract/papermill` instead
+### When the loop outgrows the kernel
 
-The MCP path needs a live kernel and an agent that speaks MCP. For
-cases where you can't or don't want either:
-
-- CI / cron / scheduled eval sweeps with no agent in the loop
-- Fan-out runs — 100 candidate prompts × 50 eval items
-  shouldn't be 5000 live kernel sessions
-- Hand-off to a worker pool — pool workers don't have an MCP
-  client, they just need a CLI that takes notebook + params
-
-[`nteract/papermill`](https://github.com/nteract/papermill)
-parametrizes and executes notebooks headlessly: same notebook, no
-live kernel, runs as a plain Python subprocess. The right wiring when
-you want N parallel evaluations or when the improvement step is
-itself a separate service. The demo notebooks here don't use it
-because the demo is interactive — but at scale, a serious
-eval-improve loop usually runs both substrates side by side: MCP for
-iteration, papermill for sweeps.
+If the loop eventually hits real scale — memory-constrained fan-out,
+sub-100ms per-run latency, multi-tenant serving — the honest move
+isn't to keep wrapping notebooks in headless batch executors. It's to
+port the hot path to a compiled service (Rust, Go) and let the
+notebook stay being a notebook. Notebooks are for iteration; the
+moment they stop being interactive, the substrate stops earning its
+keep.
 
 ## Status
 
