@@ -60,34 +60,54 @@ config composition and post-hoc trajectory EDA.
    what is conventionally two separate codebases into one cell-by-cell
    flow.
 
-## The substrate — `nteract`'s MCP, driven live
+## The nteract substrate — three repos that make the loop tractable
 
-The cleanest version of this loop is **agent-in-flow**. An agent fires
-`execute_cell` over MCP, the cell runs in a live kernel, and the
-cell's outputs come back in the *same* tool response — no `.ipynb`
-round-trip, no separate "harvest" step, no scraps file to re-parse.
-Eval and improvement become adjacent tool calls, not adjacent
-subprocess invocations.
+The notebook half of the story is not one program. The
+[`nteract`](https://github.com/nteract) organization ships a modular
+suite of libraries built around React and programmatic execution.
+Three of them, together, are how an eval ↔ improve loop is wired in
+practice:
 
-That's what [`nteract/nteract`](https://github.com/nteract/nteract)
-gives you: a desktop + kernel substrate built around React and rich
-programmatic execution, paired with an MCP server (`runt`) that
-exposes notebook operations as tool calls. The demo notebooks in
-this repo (still a work in progress) are being built and driven
-against exactly that MCP — every cell created, executed, and re-read
-through `mcp__runt__*` tools by an agent inside Claude Code. The eval
-notebook isn't a file you hand to a subprocess; it's a kernel session
-the agent is *inside*.
+### 1. [`nteract/nteract`](https://github.com/nteract/nteract) — the core repo
 
-### When the loop outgrows the kernel
+A monolithic repository containing the nteract desktop application
+(Electron + React) and a large collection of SDK packages. Unlike
+JupyterLab — which runs in the browser via a Python server — nteract
+provides a native desktop experience focused on UX, rich data
+visualization, and dropping the complexity of managing hidden kernel
+state. This is the substrate the *live* loop runs on when a human is
+watching: the cell that just produced a score is one click away from
+the cell that proposes the next mutation.
 
-If the loop eventually hits real scale — memory-constrained fan-out,
-sub-100ms per-run latency, multi-tenant serving — the honest move
-isn't to keep wrapping notebooks in headless batch executors. It's to
-port the hot path to a compiled service (Rust, Go) and let the
-notebook stay being a notebook. Notebooks are for iteration; the
-moment they stop being interactive, the substrate stops earning its
-keep.
+### 2. [`nteract/papermill`](https://github.com/nteract/papermill) — the automation engine
+
+A tool for parameterizing and executing Jupyter notebooks
+programmatically. **The most critical repo in the org for an
+eval-improve loop.** Instead of an agent manually "typing" into a live
+notebook cell, papermill treats the notebook like an API: pass a JSON
+payload of the eval dataset in as parameters, papermill executes the
+notebook headlessly in the background, and outputs a new notebook
+containing the scores and trace logs. The loop becomes:
+*propose mutation → papermill executes the eval notebook with the
+mutation → harvest scores → reflect → propose next mutation.* The
+notebook is both the experiment definition and the eval harness.
+
+### 3. [`nteract/scrapbook`](https://github.com/nteract/scrapbook) — structured outputs
+
+A library for recording and reading data ("scraps") from Jupyter
+notebooks. When papermill finishes running an evaluation notebook,
+the improvement step uses scrapbook to extract visual charts (e.g. a
+matplotlib of token efficiency) or pandas DataFrames **without
+parsing the raw `.ipynb` JSON by hand**. That is what closes the loop
+mechanically: the eval notebook records `glue("score", 0.73)` and the
+improvement notebook reads `nb.scraps["score"]` — a typed channel
+between the two halves.
+
+Together: **nteract** is where the live loop lives, **papermill** is
+how you run N copies of it in batch, **scrapbook** is how the next
+round reads what the last one produced. Each one is independently
+useful; together they collapse the eval-improve split that scripts
+usually enforce.
 
 ## Status
 
