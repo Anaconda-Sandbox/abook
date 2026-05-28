@@ -60,54 +60,43 @@ config composition and post-hoc trajectory EDA.
    what is conventionally two separate codebases into one cell-by-cell
    flow.
 
-## The nteract substrate — three repos that make the loop tractable
+## The substrate — `nteract`'s MCP, driven live
 
-The notebook half of the story is not one program. The
-[`nteract`](https://github.com/nteract) organization ships a modular
-suite of libraries built around React and programmatic execution.
-Three of them, together, are how an eval ↔ improve loop is wired in
-practice:
+The cleanest version of this loop is **agent-in-flow**. An agent fires
+`execute_cell` over MCP, the cell runs in a live kernel, and the
+cell's outputs come back in the *same* tool response — no `.ipynb`
+round-trip, no separate "harvest" step, no scraps file to re-parse.
+Eval and improvement become adjacent tool calls, not adjacent
+subprocess invocations.
 
-### 1. [`nteract/nteract`](https://github.com/nteract/nteract) — the core repo
+That's what [`nteract/nteract`](https://github.com/nteract/nteract)
+gives you: a desktop + kernel substrate built around React and rich
+programmatic execution, paired with an MCP server (`runt`) that
+exposes notebook operations as tool calls. The 17 demo notebooks in
+this repo were built and driven against exactly that MCP — every
+cell was created, executed, and re-read through `mcp__runt__*` tools
+by an agent inside Claude Code. The eval notebook isn't a file you
+hand to a subprocess; it's a kernel session the agent is *inside*.
 
-A monolithic repository containing the nteract desktop application
-(Electron + React) and a large collection of SDK packages. Unlike
-JupyterLab — which runs in the browser via a Python server — nteract
-provides a native desktop experience focused on UX, rich data
-visualization, and dropping the complexity of managing hidden kernel
-state. This is the substrate the *live* loop runs on when a human is
-watching: the cell that just produced a score is one click away from
-the cell that proposes the next mutation.
+### When you'd reach for `nteract/papermill` instead
 
-### 2. [`nteract/papermill`](https://github.com/nteract/papermill) — the automation engine
+The MCP path needs a live kernel and an agent that speaks MCP. For
+cases where you can't or don't want either:
 
-A tool for parameterizing and executing Jupyter notebooks
-programmatically. **The most critical repo in the org for an
-eval-improve loop.** Instead of an agent manually "typing" into a live
-notebook cell, papermill treats the notebook like an API: pass a JSON
-payload of the eval dataset in as parameters, papermill executes the
-notebook headlessly in the background, and outputs a new notebook
-containing the scores and trace logs. The loop becomes:
-*propose mutation → papermill executes the eval notebook with the
-mutation → harvest scores → reflect → propose next mutation.* The
-notebook is both the experiment definition and the eval harness.
+- CI / cron / scheduled eval sweeps with no agent in the loop
+- Fan-out runs — 100 candidate prompts × 50 eval items
+  shouldn't be 5000 live kernel sessions
+- Hand-off to a worker pool — pool workers don't have an MCP
+  client, they just need a CLI that takes notebook + params
 
-### 3. [`nteract/scrapbook`](https://github.com/nteract/scrapbook) — structured outputs
-
-A library for recording and reading data ("scraps") from Jupyter
-notebooks. When papermill finishes running an evaluation notebook,
-the improvement step uses scrapbook to extract visual charts (e.g. a
-matplotlib of token efficiency) or pandas DataFrames **without
-parsing the raw `.ipynb` JSON by hand**. That is what closes the loop
-mechanically: the eval notebook records `glue("score", 0.73)` and the
-improvement notebook reads `nb.scraps["score"]` — a typed channel
-between the two halves.
-
-Together: **nteract** is where the live loop lives, **papermill** is
-how you run N copies of it in batch, **scrapbook** is how the next
-round reads what the last one produced. Each one is independently
-useful; together they collapse the eval-improve split that scripts
-usually enforce.
+[`nteract/papermill`](https://github.com/nteract/papermill)
+parametrizes and executes notebooks headlessly: same notebook, no
+live kernel, runs as a plain Python subprocess. The right wiring when
+you want N parallel evaluations or when the improvement step is
+itself a separate service. The 17 notebooks here don't use it
+because the demo is interactive — but at scale, a serious
+eval-improve loop usually runs both substrates side by side: MCP for
+iteration, papermill for sweeps.
 
 ## Status
 
