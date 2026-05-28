@@ -1,29 +1,27 @@
-# abook — a self-evolving notebook: evaluation + improvement in one loop
+# abook — a self-evolving notebook
+### evaluation + improvement in one loop, driven live over nteract MCP
 
 > **Evaluation and improvement are one loop.**
 > Eval without improvement has no value. Improvement without eval has no measurement.
 
-A notebook hosts the state of an agent's behavior — its eval set, its
-trace history, its best-so-far artifact — and that same notebook hosts
-the agent doing the next improvement. The two halves of the loop live
-in the same kernel namespace. That's what "self-evolving" means here:
-not that the notebook edits itself, but that the *thing it operates
-on* — prompt, skill document, code, agent architecture, config —
-gets edited based on what just got measured, in cells one tab apart.
+A notebook hosts the agent's eval set, trace history, and best-so-far
+artifact — and the same notebook hosts the agent doing the next
+improvement. *Self-evolving* doesn't mean the notebook edits itself; it
+means the **thing it operates on** — prompt, skill document, code,
+config — gets edited from what just got measured, in cells one tab
+apart.
 
 ## The loop
 
 ```
-    rollout ──► score ──► reflect ──► edit ──► re-evaluate
-        ▲                                              │
-        └──────────────────────────────────────────────┘
+    rollout ──► evaluate ──► reflect ──► edit
+                   ▲                       │
+                   └───────────────────────┘
 ```
 
-Four operations, none of them notebook-native by themselves. What a
-notebook supplies is **coupling**: rollout outputs land in DataFrames
-the reflect step slices; the edit step writes a new artifact the
-re-evaluate step picks up without a process restart; convergence plots
-update inline while the loop is alive.
+None of those operations is notebook-native by itself. What a notebook
+supplies is **coupling**: each arrow above happens without a process
+restart, in the same memory.
 
 ## Two real instances of the loop
 
@@ -32,82 +30,82 @@ update inline while the loop is alive.
 | [`gepa`](https://github.com/gepa-ai/gepa) — Genetic-Pareto reflective prompt optimization (ICLR 2026 Oral) | a system prompt |
 | [`SkillOpt`](https://github.com/microsoft/SkillOpt) — natural-language skill document as trainable artifact (Microsoft Research) | a skill markdown |
 
-Both libraries are independent. Both run their full
-rollout–reflect–edit–gate loop. GEPA is kernel-native by design (the
-optimizer object holds state in Python); SkillOpt is batch-trainer-
-native (state lives on disk) but still benefits from kernel-resident
-config composition and post-hoc trajectory EDA.
+Both are independent. Both run the full rollout–reflect–edit–gate
+loop. GEPA is kernel-native by design (optimizer state in Python);
+SkillOpt is batch-trainer-native (state on disk) but still earns its
+keep from kernel-resident config composition and post-hoc trajectory
+EDA.
 
-## Why the loop wants a notebook
+## Layers — what does what
 
-1. **Persistent state.** The eval set loads once. The best-so-far
-   artifact stays in scope. The reflection LM's API client stays
-   warm. A subprocess loop pays this tax every iteration; a kernel
-   loop pays it once.
+**Two intelligences cooperate, at different scales.** The notebook
+isn't dumb — its cells call LLM APIs directly (GEPA's
+`reflection_lm`, SkillOpt's analyst). That's **thin intelligence**,
+bounded by the budget the host sets. Claude Code is **heavy
+intelligence**: it drives the session itself, decides what to run
+next, and may rewrite the optimizer between iterations.
 
-2. **Coupled introspection.** When the optimizer fails to improve,
-   the failed trace is a DataFrame slice away — not a JSON file to
-   re-parse with another script. The improvement step reads the same
-   object the eval step produced.
+| Layer | Role | What it contributes |
+|---|---|---|
+| **Claude Code** | heavy intelligence (host) | drives the session, decides which experiment to run, calls `mcp__runt__*` tools, inspects results between iterations |
+| **Notebook cells** | thin intelligence (inner) | LLM calls *inside the optimizer* — GEPA's `reflection_lm`, SkillOpt's analyst LLM; bounded by `max_metric_calls` |
+| **nteract MCP (`runt`)** | substrate | live kernel, persistent state, inline outputs, MCP tool surface |
+| **GEPA / SkillOpt** | optimizer library | structures `rollout → evaluate → reflect → edit`; defines the candidate / patch / gate contract |
 
-3. **Visible artifacts.** The thing under evolution — a prompt diff,
-   an SVG, a Pareto frontier — renders inline. The human in the loop
-   glances at the artifact between rounds without standing up a
-   dashboard.
+The 4-step loop above is the **inner loop**, run by thin intelligence
+inside the notebook. The **outer loop** is Claude Code itself —
+observing each inner-loop outcome and deciding what to change for the
+next run. Both halves are eval-and-improve, just at different scales:
+the inner mutates an artifact, the outer mutates the experiment.
 
-4. **One vocabulary.** Eval and improvement use the same Python, the
-   same DataFrame library, the same model client. A notebook collapses
-   what is conventionally two separate codebases into one cell-by-cell
-   flow.
+## Why each step wants a notebook
 
-## The nteract substrate — three repos that make the loop tractable
+One ergonomic property per arrow in the loop above.
 
-The notebook half of the story is not one program. The
-[`nteract`](https://github.com/nteract) organization ships a modular
-suite of libraries built around React and programmatic execution.
-Three of them, together, are how an eval ↔ improve loop is wired in
-practice:
+1. **`rollout`** wants **persistent state**. Eval set already loaded,
+   model client already warm, best-so-far artifact already in scope.
+   A subprocess loop pays the cold-start tax every iteration; a kernel
+   pays it once.
 
-### 1. [`nteract/nteract`](https://github.com/nteract/nteract) — the core repo
+2. **`evaluate`** wants **coupled introspection**. When a candidate
+   fails, the failed trace is a DataFrame slice away — not a JSON
+   file to re-parse with another script. The next step reads the same
+   object this step produced.
 
-A monolithic repository containing the nteract desktop application
-(Electron + React) and a large collection of SDK packages. Unlike
-JupyterLab — which runs in the browser via a Python server — nteract
-provides a native desktop experience focused on UX, rich data
-visualization, and dropping the complexity of managing hidden kernel
-state. This is the substrate the *live* loop runs on when a human is
-watching: the cell that just produced a score is one click away from
-the cell that proposes the next mutation.
+3. **`reflect`** wants **visible artifacts**. The thing under
+   evolution — a prompt diff, an SVG, a Pareto frontier — renders
+   inline. The human in the loop glances at it between rounds without
+   standing up a dashboard.
 
-### 2. [`nteract/papermill`](https://github.com/nteract/papermill) — the automation engine
+4. **`edit`** wants **one vocabulary**. The mutation is written in the
+   same Python as the evaluator, against the same DataFrames, calling
+   the same model client. What's conventionally two codebases collapses
+   into one cell-by-cell flow.
 
-A tool for parameterizing and executing Jupyter notebooks
-programmatically. **The most critical repo in the org for an
-eval-improve loop.** Instead of an agent manually "typing" into a live
-notebook cell, papermill treats the notebook like an API: pass a JSON
-payload of the eval dataset in as parameters, papermill executes the
-notebook headlessly in the background, and outputs a new notebook
-containing the scores and trace logs. The loop becomes:
-*propose mutation → papermill executes the eval notebook with the
-mutation → harvest scores → reflect → propose next mutation.* The
-notebook is both the experiment definition and the eval harness.
+## The substrate — `nteract`'s MCP, driven live
 
-### 3. [`nteract/scrapbook`](https://github.com/nteract/scrapbook) — structured outputs
+The cleanest version of this loop is **agent-in-flow**. An agent
+fires `execute_cell` over MCP; the cell runs in a live kernel; the
+output comes back in the same tool response. No `.ipynb` round-trip,
+no harvest step, no scraps file. Evaluate and edit become adjacent
+tool calls, not adjacent subprocess invocations.
 
-A library for recording and reading data ("scraps") from Jupyter
-notebooks. When papermill finishes running an evaluation notebook,
-the improvement step uses scrapbook to extract visual charts (e.g. a
-matplotlib of token efficiency) or pandas DataFrames **without
-parsing the raw `.ipynb` JSON by hand**. That is what closes the loop
-mechanically: the eval notebook records `glue("score", 0.73)` and the
-improvement notebook reads `nb.scraps["score"]` — a typed channel
-between the two halves.
+[`nteract/nteract`](https://github.com/nteract/nteract) provides the
+substrate — desktop + kernel built on React, plus the `runt` MCP
+server that exposes notebook operations as tool calls. The
+work-in-progress demo notebooks here are built and driven against
+exactly that MCP, every cell created and read through `mcp__runt__*`
+tools by an agent inside Claude Code. The eval notebook isn't a file
+handed to a subprocess; it's a kernel session the agent is *inside*.
 
-Together: **nteract** is where the live loop lives, **papermill** is
-how you run N copies of it in batch, **scrapbook** is how the next
-round reads what the last one produced. Each one is independently
-useful; together they collapse the eval-improve split that scripts
-usually enforce.
+### When the loop outgrows the kernel
+
+If the loop hits real scale — memory-constrained fan-out, sub-100ms
+latency, multi-tenant serving — don't wrap notebooks in headless
+batch executors. Port the hot path to a compiled service (Rust, Go)
+and let the notebook stay being a notebook. Notebooks are for
+iteration; the moment they stop being interactive, the substrate
+stops earning its keep.
 
 ## Status
 
