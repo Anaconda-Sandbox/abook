@@ -1,0 +1,11 @@
+[
+  {
+    "type": "message",
+    "turn": 1,
+    "content": "<answer>Levi's Stadium</answer>"
+  },
+  {
+    "role": "system",
+    "content": "[EVALUATION RESULT]\nQuestion: What venue did Super Bowl 50 take place in?\nPredicted answer: \"Levi's Stadium\"\nGold answers: [\"Levi's Stadium\", \"Levi's Stadium in the San Francisco Bay Area at Santa Clara\"]\nExact Match: 1.0\nF1: 1.0000"
+  }
+]

@@ -1,14 +1,15 @@
 """Repair an LLM-generated Jupyter notebook.
 
-The eval-improve loop's edit step often hands back a `.ipynb` that is
-*syntactically* valid but messy in the small ways ruff catches: dangling
-imports, single-char loop variables, lambdas where a `def` would do,
-missing `strict=` on `zip`. This module exposes a single function that
-normalizes such a notebook in place, plus a `agentbook-fix` CLI for the
-same.
+An LLM-authored or LLM-exported `.ipynb` is often *syntactically* valid
+but messy in the small ways ruff catches: dangling imports, single-char
+loop variables, lambdas where a `def` would do, missing `strict=` on
+`zip`. This module exposes a single function that normalizes such a
+notebook in place, plus a `agentbook-fix` CLI for the same.
 
-Designed to be called as the **post-edit hygiene step** of the loop:
-``rollout → score → reflect → edit → repair_notebook(...) → re-evaluate``.
+This operates on a notebook **file** (the saved/exported artifact) — not
+on the in-kernel candidate the inner loop mutates (which is typically a
+prompt string, not a notebook). Run it as hygiene after a session writes
+a notebook to disk, e.g. before committing a demo notebook.
 
 The repair is non-semantic — it never changes what the notebook
 computes, only how it reads.
