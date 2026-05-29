@@ -180,6 +180,40 @@ runs; **SC-002** host→next-experiment latency **0.012 ms** (≪1s); **SC-004**
 real candidate (genuine reflective prompt rewrite), scores recorded, best selected, reproducible
 from a fresh kernel via `notebooks/utils/demo.py`.
 
+## Addendum: Agentic rollout — driver-mode, `claude -p` (2026-05-28)
+
+**Context**: US5 (`ClaudeAgentOptimizer`) is the first adapter to use `run_iteration`
+in driver mode with a real (non-fake) optimizer. The rollout is a genuine multi-turn
+tool-using agent rather than single-turn Q&A; the adapter shells out to
+`claude -p --output-format stream-json --allowedTools Bash` and parses the resulting
+NDJSON stream into a `Trace`.
+
+**Decision: parse `--output-format stream-json` into Traces.**
+
+| Option | Pros | Cons | Selected? |
+|--------|------|------|-----------|
+| `--output-format stream-json` + `parse_stream_json` | Full fidelity: `tool_use`/`tool_result` pairs, `num_turns`, cost, and tokens all present in the stream | Parser must handle NDJSON incrementally | ✅ Yes |
+| `--output-format json` (final summary only) | Single JSON blob, simpler to parse | `tool_use`/`tool_result` pairs stripped; no per-turn detail; `num_turns` not directly available | ❌ Loses trajectory |
+| Scrape plain text | Zero extra parsing | Tool calls not structured; reflect step gets text globs, not queryable call/result pairs | ❌ Too lossy |
+
+**Rationale**: The `Trace.signals` field must carry the full tool-call trajectory so the
+reflect step can target specific failing tool calls in the rewritten system prompt. The
+stream-json format is the only CLI option that preserves `tool_use`/`tool_result` pairing,
+turn count, and cost in one pass. Scraping text or using the final-summary JSON both lose
+structure that the reflect step needs.
+
+**Driver mode vs. engine mode**: GEPA and SkillOpt are engine-mode adapters — they own
+their own loop and bypass `run_iteration`. `ClaudeAgentOptimizer` is the **first driver-mode
+adapter backed by a real optimizer**: it exposes the four arrows individually and lets the
+substrate's written-once `run_iteration` orchestrate them. This validates the driver-mode
+path end-to-end (beyond the `FakeOptimizer` used in the Phase-2 tests).
+
+**Cost trade-off**: Each rollout is a real `claude -p` Bedrock call. With the CLI's own
+system prompt overhead, a single episode costs roughly $0.20. The eval set is therefore kept
+intentionally tiny (tool-forcing tasks with deterministic gold answers such as `sha256("foo")`
+and `17 * 23 = 391`) to keep a demo run affordable. Larger eval sets are possible but should
+be budgeted explicitly before running.
+
 ## Summary
 
 | Decision | Selected | Key Reason |
@@ -189,5 +223,6 @@ from a fresh kernel via `notebooks/utils/demo.py`.
 | Optimizer state | State-agnostic contract | Hosts kernel-resident (GEPA) and on-disk (SkillOpt) shapes unchanged |
 | Eval-set integrity | Pin-and-warn on hash change | Surfaces drift (VI) without locking a host-owned knob (agent-autonomy) |
 | Inline artifacts | Rich repr via execute_cell | Zero new dependencies; satisfies "no dashboard" |
+| Agentic rollout transcript | `--output-format stream-json` + `parse_stream_json` | Only format that preserves tool-call pairs, turn count, and cost for the reflect step |
 
 *(Decision 4 / Budget row removed — budget abstraction dropped for simplicity)*

@@ -65,6 +65,13 @@ Inputs, outputs, and intermediate signals from one rollout of one candidate over
 **Invariant**: a Trace MUST be a queryable in-memory object within the session — not a
 file to re-parse (FR-004). N Traces : 1 Candidate.
 
+**Agentic rollouts** (`ClaudeAgentOptimizer`): `signals` carries the full agent trajectory —
+`tool_calls` (list of `{name, input, output}` dicts, one per `tool_use`/`tool_result` pair),
+`num_turns` (int, > 1 for a real multi-turn episode), `cost_usd` (float), `input_tokens`
+(int), and `output_tokens` (int). All fields are populated by `parse_stream_json` from the
+`claude -p --output-format stream-json` transcript before the Trace is returned from `rollout`,
+so the reflect step can target specific failing tool calls without re-parsing any file (FR-012).
+
 ## Entity: Reflection / Patch
 
 An LLM-proposed edit to a candidate, informed by recent traces (spec Key Entities).

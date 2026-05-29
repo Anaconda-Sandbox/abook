@@ -10,6 +10,22 @@ import os
 import sys
 from pathlib import Path
 
+# Model defaults — single source of truth, so notebooks/adapters never hardcode a
+# model string. Default to the 4.6 family (there is no Haiku 4.6, so Sonnet 4.6 is the
+# one default everywhere; no 4.5). Override per-shell with the env vars below.
+DEFAULT_MODEL = "claude-sonnet-4-6"  # claude CLI form (for `claude -p --model`)
+DEFAULT_BEDROCK_MODEL = "bedrock/converse/us.anthropic.claude-sonnet-4-6"  # litellm form
+
+
+def default_model() -> str:
+    """The default Claude model (CLI form). Override with ``$AGENTBOOK_MODEL``."""
+    return os.environ.get("AGENTBOOK_MODEL", DEFAULT_MODEL)
+
+
+def default_bedrock_model() -> str:
+    """The default model as a litellm Bedrock-Converse string. Override with ``$AGENTBOOK_BEDROCK_MODEL``."""
+    return os.environ.get("AGENTBOOK_BEDROCK_MODEL", DEFAULT_BEDROCK_MODEL)
+
 
 def repo_root(marker: str = "pyproject.toml") -> Path:
     """Return the repo root by ascending from cwd until ``marker`` is found."""

@@ -78,13 +78,15 @@ src/agentbook/
 ├── session.py           # Session: warm state, frontier, eval-set pin/hash, kernel_pid (NEW)
 ├── adapters/
 │   ├── __init__.py      # (NEW)
-│   ├── gepa_adapter.py  # GEPA → Optimizer; kernel-resident state (NEW)
-│   └── skillopt_adapter.py  # SkillOpt → Optimizer; on-disk state (NEW)
+│   ├── gepa_adapter.py  # GEPA → Optimizer; kernel-resident state; engine mode (NEW)
+│   ├── skillopt_adapter.py  # SkillOpt → Optimizer; on-disk state; engine mode (NEW)
+│   └── claude_agent_adapter.py  # ClaudeAgentOptimizer + parse_stream_json; driver mode (NEW)
 └── notebook_fix.py      # EXISTING — post-edit hygiene (repair_notebook + agentbook-fix CLI)
 
 notebooks/
 ├── gepa_demo.ipynb      # MCP-driven system-prompt evolution demo (NEW, rebuilt)
-└── skillopt_demo.ipynb  # MCP-driven skill-document evolution demo (NEW, rebuilt)
+├── skillopt_demo.ipynb  # MCP-driven skill-document evolution demo (NEW, rebuilt)
+└── agentic_demo.ipynb   # Real claude -p multi-turn agent evolution demo (NEW)
 
 docs/
 └── graduation.md        # Measurable thresholds for leaving the kernel (FR-011, SC-005) (NEW)
@@ -92,7 +94,8 @@ docs/
 tests/
 ├── test_smoke.py        # EXISTING — package importability
 ├── test_contract.py     # Both adapters satisfy Optimizer with no driver changes (NEW)
-└── test_loop.py         # run_iteration honors gate; no self-rewrite (NEW)
+├── test_loop.py         # run_iteration honors gate; no self-rewrite (NEW)
+└── test_claude_agent.py # parse_stream_json, Protocol conformance, scoring (offline) (NEW)
 ```
 
 **Structure Decision**: Single project. The substrate is a thin installable library
