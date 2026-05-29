@@ -64,6 +64,8 @@ include = [
 target-version = "py310"
 line-length = 120
 src = ["src", "tests"]
+# Showcase/analysis notebooks are illustrative, not project code — don't lint/format them.
+extend-exclude = ["notebooks/analysis"]
 
 [tool.ruff.lint]
 select = [
