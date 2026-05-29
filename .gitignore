@@ -124,3 +124,7 @@ uv.lock
 
 # local agent transcripts for analysis (leak session env; not committed)
 _agent_logs/
+tasks/**/instances/
+tasks/**/data/
+tasks/**/__pycache__/
+jobs/
