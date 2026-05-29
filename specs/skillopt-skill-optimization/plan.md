@@ -81,3 +81,39 @@ agentbook/
 - Vendoring reward.py into SkillOpt vs importing agentbook path → vendor a copy in the
   adapter (keeps SkillOpt self-contained); keep agentbook candidate as source of truth + a
   test asserting they match.
+
+## Phase 1b — Slice 2: `specify` (structural ⊕ LLM trace-judge)
+
+Same loop contract as reviewer; the only new piece is the **reward** (a model call augments the
+deterministic check). No SkillOpt edits; `env.name: specify`, `ReflACTTrainer(cfg, adapter)` direct.
+
+### Component map
+```
+tasks/specify-skillopt/
+  seed_skill.md                 # weak: "write a spec"
+  gen_instances.py              # feature briefs (the task input)
+  make_split.py                 # 5/2/3 disjoint split
+  run_smoke.py                  # trainer driver (env.name=specify)
+  specify_env/
+    adapter.py   dataloader.py  # mirror reviewer
+    prompts.py                  # build_system(skill)+frame, build_user(brief) — brief only (FR-014)
+    reward.py                   # deterministic STRUCTURAL score (sections, FR-/SC- ids, MUST, measurable)
+    judge.py                    # LLM trace-judge: testable/coverage/outcome/overall (FR-015)
+    rollout.py                  # write spec → score = 0.5·structural + 0.5·judge; trajectory carries both
+```
+
+### Reward flow (one rollout)
+1. `chat_target(skill+frame, brief)` → spec text (~1.5k tok).
+2. `structural_reward(brief, spec)` → {hard, soft, failed_checks}.
+3. `llm_judge(brief, spec)` → {testable, coverage, outcome, overall, notes} (~0.5k tok).
+4. `soft = 0.5·structural.soft + 0.5·judge.overall`; `hard = structural.hard==1 AND judge.overall≥0.7` (FR-016).
+5. trajectory `[verification]` = failed structural checks **+** judge feedback → reflect learns both (FR-017).
+
+### Why the judge here (not for reviewer)
+Reviewer reward is fully objective (planted-bug match). A spec has no single right answer; structure is
+checkable but *testability/coverage/outcome* are semantic — the judge supplies exactly that signal. Cost
+is justified: judge tokens ≪ the spec-writing rollout tokens.
+
+### Risks
+- Judge non-determinism / unparseable output → `judge.py` returns conservative 0 + `error`; surfaced, not hidden.
+- Judge could be gamed → held-out test split (FR-006/007) still guards; SC-006 checks the judge adds real signal.

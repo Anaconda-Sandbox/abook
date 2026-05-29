@@ -28,9 +28,21 @@
 - [ ] T017 [US2] Report held-out test reward before/after + train↔test gap (real numbers)
 - [ ] T018 Verify against spec SC-000/002/003/004/005; record result in notebook
 
-## Phase E — second slice (deferred) [US3]
-- [ ] T019 [US3] specify slice adapter variant + LLM trace-judge verifier (after reviewer green)
+> **Phase A–D (reviewer slice): COMPLETE** — merged in PR #9. SC-000/002/003/004/005 met
+> (held-out test Δ +0.00, gate rejected non-improving edits; honest null per SC-004).
 
-## Definition of done (smoke)
-SC-000 + SC-002 + SC-003 pass; notebook reproducible from fresh kernel; skill diff
-auditable to missed-bug categories (SC-005). Scale to SC-001 only on user go-ahead.
+## Phase E — second slice: `specify` (structural ⊕ LLM trace-judge) [US3]
+- [X] T019 [US3] `tasks/specify-skillopt/specify_env/` package: adapter / dataloader (FR-014)
+- [X] T020 [US3] `prompts.py` — write-a-spec system+user builders (brief only)
+- [X] T021 [US3] `judge.py` — LLM trace-judge scoring testable/coverage/outcome (FR-015/016)
+- [X] T022 [US3] `rollout.py` — reward = structural ⊕ judge; trajectory carries both signals (FR-017)
+- [X] T023 [US3] vendor structural `reward.py`; `gen_instances.py` + `make_split.py` (5/2/3)
+- [X] T024 [US3] no-API wiring check (judge parse, structural, blend, adapter import) — PASS
+- [ ] T025 [US3] `run_smoke.py` real run → `jobs/specify-skillopt-<date>/` (~$1.5, ~10 min)
+- [ ] T026 [US3] `notebooks/specify_skillopt.ipynb` — analysis; show judge catching a spec the
+      structural reward passed (SC-006); helpers in `utils/`
+
+## Definition of done
+- Reviewer (smoke): SC-000 + SC-002 + SC-003 + SC-005 — ✅ done (PR #9).
+- Specify (smoke): SC-006 — judge adds signal beyond structural on a real run.
+- Scale to SC-001 only on user go-ahead.
