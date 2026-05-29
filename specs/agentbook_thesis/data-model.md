@@ -74,7 +74,7 @@ An LLM-proposed edit to a candidate, informed by recent traces (spec Key Entitie
 | `from_candidate_id` | int / str | FK → Candidate |
 | `proposed_artifact` | same type as artifact | The edited slice |
 | `rationale` | str | Why the inner LLM proposed this |
-| `llm_calls` | int | Counts against the Budget |
+| `llm_calls` | int | Number of inner-LLM calls made for this reflection |
 
 **Relationship**: a Reflection produces a new Candidate (`parent_id = from_candidate_id`).
 
@@ -89,19 +89,7 @@ The set of currently non-dominated candidates under the optimizer's scoring (spe
 
 **Relationship**: subset of all Candidates; recomputed after each evaluate step.
 
-## Entity: Budget
-
-The host-declared bound on inner-loop LLM calls/spend (FR-007, SC-006).
-
-| Field | Type | Constraints |
-|-------|------|-------------|
-| `max_calls` | int | Required; the hard cap |
-| `max_spend` | float \| None | Optional spend cap where the provider exposes cost |
-| `calls_used` | int | Monotonic; incremented at the client chokepoint |
-| `state` | enum: `active` \| `exhausted` | `exhausted` halts the inner loop with a partial result |
-
-**Invariant**: reaching the cap raises `BudgetExhausted`; the run halts cleanly with the
-best-so-far Candidate. Never silently exceeded.
+*(Budget entity removed — budget abstraction dropped for simplicity)*
 
 ## Entity: Iteration
 
@@ -125,14 +113,13 @@ One live kernel holding state across iterations (spec Key Entities).
 |-------|------|-------------|
 | `kernel_pid` | int | MUST be stable across all iterations (SC-001) |
 | `eval_set` | EvalSet | Loaded once |
-| `model_client` | BudgetedClient | Loaded once; warm across iterations |
+| `model_client` | callable | Loaded once; warm across iterations |
 | `candidates` | list[Candidate] | Grows as the loop runs |
 | `frontier` | Frontier | Current non-dominated set |
-| `budget` | Budget | The active bound |
 | `slice` | HarnessSlice | The one slice under evolution this run |
 
 **Invariant**: the inner loop never mutates `Session` config (eval_set identity, slice
-kind, budget) — those are host-set at setup and changed only between sessions (Constitution II).
+kind) — those are host-set at setup and changed only between sessions (Constitution II).
 
 ## Relationship Summary
 
@@ -142,7 +129,6 @@ Session 1──1 HarnessSlice 1──N Candidate
 Candidate 1──N Trace N──1 Example
 Candidate 1──N Reflection ──produces──► Candidate (parent_id)
 Session 1──1 Frontier ⊆ Candidates
-Session 1──1 Budget ──guards──► every inner LLM call
 Session 1──N Iteration
 ```
 

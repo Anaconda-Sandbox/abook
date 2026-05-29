@@ -8,13 +8,13 @@
 Build a thin Python substrate (`src/agentbook`) plus MCP-driven demo notebooks that host
 the full rollout → evaluate → reflect → edit loop inside one live kernel session, with no
 process restart between arrows. The substrate defines a single structural loop contract (a
-Python `Protocol` + a written-once driver) and a budget guard; two thin adapters wire GEPA
-(system-prompt slice, kernel-resident state) and SkillOpt (skill-document slice, on-disk
-state) into that one contract, proving the substrate generalizes across both harness slice
-and state shape. The host (Claude Code) drives every cell over `mcp__runt__*`, reads live
-outcomes to pick the next experiment, and edits agentbook itself between sessions — which
-is what makes the harness genuinely self-evolving. A graduation-criteria doc names the
-measurable thresholds at which the hot path leaves the kernel for a compiled service.
+Python `Protocol` + a written-once driver); two thin adapters wire GEPA (system-prompt
+slice, kernel-resident state) and SkillOpt (skill-document slice, on-disk state) into that
+one contract, proving the substrate generalizes across both harness slice and state shape.
+The host (Claude Code) drives every cell over `mcp__runt__*`, reads live outcomes to pick
+the next experiment, and edits agentbook itself between sessions — which is what makes the
+harness genuinely self-evolving. A graduation-criteria doc names the measurable thresholds
+at which the hot path leaves the kernel for a compiled service.
 
 ## Technical Context
 
@@ -24,7 +24,7 @@ measurable thresholds at which the hot path leaves the kernel for a compiled ser
 **Testing**: `pytest` (+ `pytest-asyncio`, `pytest-cov`); unit tests may mock, CLI/E2E hits real services with real credentials (Constitution IV)
 **Target Platform**: Local dev kernel driven live over MCP (single-tenant, interactive)
 **Project Type**: Single project — installable library + MCP-driven notebooks
-**Performance Goals**: ≥10 iterations, stable kernel PID (SC-001); host→next-experiment latency <1s on a warm kernel (SC-002); inner-loop spend within budget (SC-006)
+**Performance Goals**: ≥10 iterations, stable kernel PID (SC-001); host→next-experiment latency <1s on a warm kernel (SC-002)
 **Constraints**: Inner loop never self-rewrites the notebook/codebase (II.1); one declared slice per run (II.2); substrate-first, no batch-wrapping (II.3); real data only (I)
 **Scale/Scope**: Single-tenant interactive iteration. Multi-tenant serving and headless batch are explicitly out of scope (A-006); FR-011 governs when to leave the kernel.
 
@@ -38,18 +38,18 @@ measurable thresholds at which the hot path leaves the kernel for a compiled ser
 | II.1 Inner loop never self-rewrites | ✅ Pass | Loop contract C-6 forbids any method mutating the notebook/codebase; agentbook edits are outer-loop, between sessions (FR-009). |
 | II.2 One declared slice per run | ✅ Pass | `Session.slice_kind` is set at setup and immutable for the run (data-model invariant); contract C-7. |
 | II.3 Substrate-first; don't batch-wrap | ✅ Pass | Research Decision 1 rejects papermill/nbclient; graduation thresholds documented (FR-011, SC-005). |
-| III. Code Quality | ✅ Pass | Adapters/budget/loop are small typed modules; ruff + mypy gate them; `agentbook-fix` already repairs LLM-edited notebooks post-`edit`. |
-| IV. Testing Standards | ✅ Pass | Budget guard + adapter conformance get unit tests; one full optimizer run validated E2E against real LLM credentials (SC-004). |
-| V. Thin Harness, Fat Skills | ✅ Pass | Substrate stays boring (Protocol + driver + budget); intelligence is the inner reflection LLM and the outer host. |
-| VI. Explicit Over Implicit | ✅ Pass | Slice, budget, and eval set are declared at setup; eval-set drift is surfaced loudly (research Decision 5), never silent. |
+| III. Code Quality | ✅ Pass | Adapters/loop are small typed modules; ruff + mypy gate them; `agentbook-fix` already repairs LLM-edited notebooks post-`edit`. |
+| IV. Testing Standards | ✅ Pass | Adapter conformance + loop driver get unit tests; one full optimizer run validated E2E against real LLM credentials (SC-004). |
+| V. Thin Harness, Fat Skills | ✅ Pass | Substrate stays boring (Protocol + driver); intelligence is the inner reflection LLM and the outer host. |
+| VI. Explicit Over Implicit | ✅ Pass | Slice and eval set are declared at setup; eval-set drift is surfaced loudly (research Decision 5), never silent. |
 
 **Gate result**: PASS — no violations. Proceeded to Phase 0.
 
 ### Post-Design Re-check (after Phase 1)
 
 Re-evaluated every principle against research.md, data-model.md, and contracts/loop-contract.md.
-No new violations emerged. The state-agnostic contract (Decision 3) and BudgetedClient
-chokepoint (Decision 4) strengthen II and VI rather than straining them. **Gate result: PASS.**
+No new violations emerged. The state-agnostic contract (Decision 3) strengthens II and VI rather
+than straining them. **Gate result: PASS.**
 
 ## Project Structure
 
@@ -76,7 +76,6 @@ src/agentbook/
 ├── loop.py              # run_iteration driver — reference driver for "driver mode" optimizers (NEW)
 ├── contract.py          # the Optimizer Protocol + Trace/Reflection types (NEW)
 ├── session.py           # Session: warm state, frontier, eval-set pin/hash, kernel_pid (NEW)
-├── budget.py            # Budget + BudgetedClient (call/spend cap, BudgetExhausted) (NEW)
 ├── adapters/
 │   ├── __init__.py      # (NEW)
 │   ├── gepa_adapter.py  # GEPA → Optimizer; kernel-resident state (NEW)
@@ -92,9 +91,8 @@ docs/
 
 tests/
 ├── test_smoke.py        # EXISTING — package importability
-├── test_budget.py       # Budget cap halts cleanly with partial result (NEW)
 ├── test_contract.py     # Both adapters satisfy Optimizer with no driver changes (NEW)
-└── test_loop.py         # run_iteration honors gate + budget; no self-rewrite (NEW)
+└── test_loop.py         # run_iteration honors gate; no self-rewrite (NEW)
 ```
 
 **Structure Decision**: Single project. The substrate is a thin installable library

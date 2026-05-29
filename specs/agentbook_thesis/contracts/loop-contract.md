@@ -30,8 +30,7 @@ class Optimizer(Protocol):
         remain a queryable in-memory object for the next step (FR-004)."""
 
     def reflect(self, candidate: Any, traces: list["Trace"]) -> "Reflection":
-        """Inner LLM proposes an edit to `candidate`, informed by `traces`.
-        Every LLM call passes through the BudgetedClient (FR-007)."""
+        """Inner LLM proposes an edit to `candidate`, informed by `traces`."""
 
     def edit(self, reflection: "Reflection") -> Any:
         """Apply the reflection, producing a new candidate. Written in the
@@ -54,25 +53,23 @@ supports **two** integration modes against the same loop *concept*:
 2. **Engine mode** — the optimizer owns its loop (e.g. `gepa.optimize(...)`), running
    rollout→evaluate→reflect→edit *internally*. The adapter does not drive it; instead it
    **maps the library's progress events (callbacks) onto the substrate entities**
-   (`Candidate`/`Trace`/`Iteration`/`Frontier`) so they render inline and the budget is
-   honored. GEPA integrates this way.
+   (`Candidate`/`Trace`/`Iteration`/`Frontier`) so they render inline.
+   GEPA integrates this way.
 
 What generalizes across both (and what SC-003 actually asserts) is the **substrate**: the live
-kernel, the MCP cell-op surface, the budget guard, and the shared entity/observation model —
-*not* a single loop driver. The adapter is thin in both modes, but in engine mode it calls the
-library's own optimizer rather than the substrate's `run_iteration`.
+kernel, the MCP cell-op surface, and the shared entity/observation model — *not* a single loop
+driver. The adapter is thin in both modes, but in engine mode it calls the library's own optimizer
+rather than the substrate's `run_iteration`.
 
 ## Driver contract (substrate-owned, written once — driver mode)
 
 ```python
 def run_iteration(opt: Optimizer, session: Session) -> Iteration:
-    """One inner-loop iteration. Identical code for every optimizer.
-    Honors the budget: a BudgetExhausted raised inside reflect() halts
-    the loop cleanly with the best-so-far candidate (FR-007, SC-006)."""
+    """One inner-loop iteration. Identical code for every optimizer."""
     cand = session.select_parent()                      # frontier-driven
     traces = opt.rollout(cand, session.eval_set)        # ← persistent state
     scores = opt.evaluate(traces)                       # ← coupled introspection
-    reflection = opt.reflect(cand, traces)              # ← budgeted inner LLM
+    reflection = opt.reflect(cand, traces)              # ← inner LLM
     child = opt.edit(reflection)                        # ← one vocabulary
     accepted = opt.gate(cand, child)
     return session.record(cand, child if accepted else None, traces, scores)
@@ -95,11 +92,11 @@ in the same response (no file round-trip):
 
 | # | Obligation | Verifies |
 |---|------------|----------|
-| C-1 | Both adapters integrate with **no optimizer-specific substrate code** — via driver mode (satisfy `Optimizer`) or engine mode (map callbacks onto substrate entities). The substrate (kernel, MCP ops, budget, entity model) is unchanged per optimizer. | FR-010, SC-003 |
+| C-1 | Both adapters integrate with **no optimizer-specific substrate code** — via driver mode (satisfy `Optimizer`) or engine mode (map callbacks onto substrate entities). The substrate (kernel, MCP ops, entity model) is unchanged per optimizer. | FR-010, SC-003 |
 | C-2 | `rollout`/`evaluate` read state already resident in the kernel | FR-001, FR-003, SC-001 |
 | C-3 | A failed trace returned by `evaluate` is an in-memory queryable object | FR-004 |
-| C-4 | Every `reflect` LLM call increments the Budget; cap → `BudgetExhausted` → clean partial halt | FR-007, SC-006 |
-| C-5 | `edit` operates on the same in-memory objects as `evaluate` (no cross-codebase hand-off) | FR-006 |
-| C-6 | No method mutates the notebook or the agentbook codebase | Constitution II.1, FR-008 |
-| C-7 | Exactly one `HarnessSlice` is mutable for the run | Constitution II.2, FR-008 |
-```
+| C-4 | `edit` operates on the same in-memory objects as `evaluate` (no cross-codebase hand-off) | FR-006 |
+| C-5 | No method mutates the notebook or the agentbook codebase | Constitution II.1, FR-008 |
+| C-6 | Exactly one `HarnessSlice` is mutable for the run | Constitution II.2, FR-008 |
+
+*(C-4 renumbered from C-5/C-6/C-7 — former C-4 budget obligation removed)*

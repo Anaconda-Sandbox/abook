@@ -4,16 +4,10 @@ Written once against the :class:`agentbook.contract.Optimizer` Protocol and
 identical for every optimizer (FR-010, SC-003). One call is one inner-loop
 iteration; it runs entirely on state already resident in the kernel (FR-001,
 FR-003).
-
-The budget is honored at the one chokepoint: a :class:`BudgetExhausted` raised
-inside any arrow halts the iteration cleanly and the run is marked partial —
-the best-so-far candidate is preserved, never silently exceeding the budget
-(FR-007, SC-006).
 """
 
 from __future__ import annotations
 
-from agentbook.budget import BudgetExhausted
 from agentbook.contract import Optimizer
 from agentbook.session import Iteration, Session
 
@@ -27,31 +21,28 @@ def run_iteration(opt: Optimizer, session: Session) -> Iteration:
     """
     session.check_eval_set_drift()
     parent = session.select_parent()
-    try:
-        # rollout + evaluate the parent over the (warm, in-memory) eval set
-        traces = opt.rollout(parent.artifact, session.eval_set)
-        scores = opt.evaluate(traces)
-        for t in traces:
-            if t.score is None and t.eval_id in scores:
-                t.score = scores[t.eval_id]
-        parent.scores.update(scores)
 
-        # reflect (budgeted inner LLM) → edit → child candidate
-        reflection = opt.reflect(parent.artifact, traces)
-        child = session.add_candidate(opt.edit(reflection), parent)
+    # rollout + evaluate the parent over the (warm, in-memory) eval set
+    traces = opt.rollout(parent.artifact, session.eval_set)
+    scores = opt.evaluate(traces)
+    for t in traces:
+        if t.score is None and t.eval_id in scores:
+            t.score = scores[t.eval_id]
+    parent.scores.update(scores)
 
-        # score the child over the same eval set
-        child_traces = opt.rollout(child.artifact, session.eval_set)
-        child_scores = opt.evaluate(child_traces)
-        for t in child_traces:
-            if t.score is None and t.eval_id in child_scores:
-                t.score = child_scores[t.eval_id]
-        child.scores.update(child_scores)
+    # reflect (inner LLM) → edit → child candidate
+    reflection = opt.reflect(parent.artifact, traces)
+    child = session.add_candidate(opt.edit(reflection), parent)
 
-        if opt.gate(parent, child):
-            return session.record(parent, child, child_traces)
-        session.candidates.remove(child)
-        return session.record(parent, None, traces)
-    except BudgetExhausted:
-        session.mark_partial()
-        return session.record(parent, None, [], partial=True)
+    # score the child over the same eval set
+    child_traces = opt.rollout(child.artifact, session.eval_set)
+    child_scores = opt.evaluate(child_traces)
+    for t in child_traces:
+        if t.score is None and t.eval_id in child_scores:
+            t.score = child_scores[t.eval_id]
+    child.scores.update(child_scores)
+
+    if opt.gate(parent, child):
+        return session.record(parent, child, child_traces)
+    session.candidates.remove(child)
+    return session.record(parent, None, traces)

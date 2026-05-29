@@ -10,13 +10,11 @@ from __future__ import annotations
 import pytest
 
 from agentbook.adapters.gepa_adapter import GepaOptimizer
-from agentbook.budget import Budget, BudgetedClient
 from agentbook.session import Session
 
 
 def _session(seed_artifact: object) -> Session:
-    client = BudgetedClient(lambda *_a, **_k: None, Budget(max_calls=10))
-    return Session(eval_set=["x"], model_client=client, slice_kind="system_prompt", seed_artifact=seed_artifact)
+    return Session(eval_set=["x"], model_client=lambda *_a, **_k: None, slice_kind="system_prompt", seed_artifact=seed_artifact)
 
 
 def test_seed_candidate_requires_component_dict() -> None:

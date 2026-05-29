@@ -12,7 +12,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from agentbook.adapters.skillopt_adapter import SkillOptOptimizer
-from agentbook.budget import Budget, BudgetedClient
 from agentbook.session import Session
 
 FIXTURE = Path(__file__).parent / "fixtures" / "skillopt_run"
@@ -20,8 +19,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 def _session(seed: object, slice_kind: str) -> Session:
-    client = BudgetedClient(lambda *_a, **_k: None, Budget(max_calls=100))
-    return Session(eval_set=["q"], model_client=client, slice_kind=slice_kind, seed_artifact=seed)
+    return Session(eval_set=["q"], model_client=lambda *_a, **_k: None, slice_kind=slice_kind, seed_artifact=seed)
 
 
 def test_skillopt_maps_real_run_into_session() -> None:
@@ -40,7 +38,6 @@ def test_skillopt_maps_real_run_into_session() -> None:
     assert "test_hard" in best.scores
     # one Iteration recorded per training step from history.json
     assert len(session.iterations) >= 1
-    assert isinstance(session.budget.calls_used, int)
 
 
 def test_skillopt_reflect_reads_logged_trajectories() -> None:

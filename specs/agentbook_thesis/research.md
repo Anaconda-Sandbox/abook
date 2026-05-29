@@ -67,26 +67,7 @@ The substrate never assumes where state lives.
 state shape — the substrate must not care. State-agnosticism is what makes the two
 instances prove generalization rather than coincidence.
 
-## Decision 4: Inner-loop LLM budget enforcement
-
-**Context**: Inner-loop LLM calls must be bounded by a host-set budget; hitting it must
-halt cleanly with a partial result, never silently overrun (FR-007, SC-006).
-
-**Decision**: A `BudgetedClient` wrapper around the model client that counts calls (and,
-where available, spend), raising `BudgetExhausted` when the cap is reached. The loop
-driver catches it, returns the best-so-far candidate, and marks the run partial.
-
-| Option | Pros | Cons | Constitution Fit |
-|--------|------|------|-----------------|
-| **Budgeted client wrapper + catch** | Explicit, testable; the cap lives at the one chokepoint every call passes through | Must wrap every client the optimizer uses | ✅ Explicit-over-Implicit (VI); satisfies SC-006 |
-| Library-native `max_metric_calls` only | Zero extra code for GEPA | Not uniform across optimizers; SkillOpt counts differently | ⚠️ Partial — leaves the cap implicit and per-library |
-| Post-hoc spend reconciliation | Simple accounting | Detects overrun *after* it happened — silent overrun already occurred | ❌ Violates FR-007 ("never silently exceed") |
-
-**Rationale**: GEPA exposes `max_metric_calls`, but the constitution requires a *uniform*
-explicit budget that halts cleanly. A thin wrapper is the single chokepoint that makes
-the guarantee hold for any optimizer. The library-native cap is used *in addition*, not
-instead.
-**Rejected alternatives**: post-hoc reconciliation cannot prevent the overrun it measures.
+*(Decision 4 removed — budget abstraction dropped for simplicity)*
 
 ## Decision 5: Eval-set integrity across iterations
 
@@ -147,9 +128,8 @@ live engine run (claude-CLI rollouts), materially heavier than US1's in-process 
 
 ## Addendum: T065 edge-case handling decisions (2026-05-28) — RESOLVED
 
-The spec's Edge Cases list seven situations. Three are already resolved by the Phase-0
-decisions above — budget exhaustion (Decision 4: halt clean, partial result), eval-set drift
-(Decision 5: pin-and-warn). The remaining edge cases are decided here, each against the
+The spec's Edge Cases list seven situations. Two are already resolved by the Phase-0
+decisions above — eval-set drift (Decision 5: pin-and-warn). The remaining edge cases are decided here, each against the
 constitution (Simplicity, Explicit-over-Implicit VI, agent-autonomy). The theme is the same:
 the substrate stays minimal and **surfaces** the condition to the host rather than hiding it
 behind a recovery/retry layer that would reintroduce the cold-start tax the project removes.
@@ -169,18 +149,15 @@ makes lost iterations expensive.
 Decision: **surface to the host.** The substrate does not add its own retry loop. A provider
 rate-limit (or any reflection-call error) is caught by the loop driver and exposed as a failed
 trace — the same queryable in-memory failure object as a failed `evaluate()` (FR-004) — and the
-host decides retry vs. skip vs. re-pace. The `BudgetedClient` still counts the attempt, so a
-storm of rate-limited calls cannot silently overrun the budget. Rationale: Explicit-over-Implicit
-(VI) — a hidden substrate retry would distort both the budget accounting and the trace history,
+host decides retry vs. skip vs. re-pace. Rationale: Explicit-over-Implicit
+(VI) — a hidden substrate retry would distort the trace history,
 and silently skipping would drop a data point from cross-iteration comparison. Bounded
 retry-with-backoff *inside* the optimizer library is fine and remains optimizer-internal; the
 substrate just doesn't add a second, invisible one.
 
 **3. Optimizer swaps its own inner LLM mid-run — substrate or optimizer concern.**
-Decision: **strictly optimizer-internal.** The substrate passes an opaque, budget-wrapped model
-client; an optimizer that wants to change its inner LLM does so within its own adapter state. The
-one substrate-level invariant: whatever client is in use must remain wrapped by the
-`BudgetedClient` chokepoint, so the budget guarantee (FR-007) holds across the swap. This mirrors
+Decision: **strictly optimizer-internal.** The substrate passes an opaque model client; an
+optimizer that wants to change its inner LLM does so within its own adapter state. This mirrors
 the state-agnostic contract (Decision 3) — the substrate does not track or constrain what model an
 optimizer runs internally.
 
@@ -195,26 +172,13 @@ optimizer runs internally.
   behavior, documented rather than worked around: a running experiment is reproducible against the
   version it began with.
 
-## Addendum: T062/T064 live e2e finding (2026-05-28) — SC-006 not enforced in engine mode
+## Addendum: T062/T064 live e2e finding (2026-05-28)
 
 A real GEPA run on Bedrock (haiku task / sonnet-4-6 reflection, AIME eval, `max_metric_calls=6`,
 two runs in one warm kernel) validated the substrate claims: **SC-001** PID stable across both
 runs; **SC-002** host→next-experiment latency **0.012 ms** (≪1s); **SC-004** run #1 evolved a
 real candidate (genuine reflective prompt rewrite), scores recorded, best selected, reproducible
 from a fresh kernel via `notebooks/utils/demo.py`.
-
-**Finding (gap):** in engine mode the `BudgetedClient` is **bypassed** — `gepa.optimize` calls
-Bedrock directly through litellm, not through the wrapped client — so `Budget` neither counts nor
-enforces those calls. The observed run reported `budget 14/6` with **no `BudgetExhausted`**, and
-gepa's own `max_metric_calls` soft-cap overshot (6→14). This contradicts Decision 4's "single
-chokepoint every call passes through" for the engine-mode adapter: there, the only real bound is
-gepa's library-native cap, which is soft. SC-006's "never silently exceed" therefore does **not**
-hold for the GEPA engine-mode path as wired.
-**Follow-up options (post-MVP):** (a) pass a litellm callback / wrapper into gepa so its calls are
-counted at the chokepoint; (b) treat gepa's `max_metric_calls` as the contractual cap and have the
-adapter surface the overshoot as a partial-run flag; (c) document engine-mode as "library-capped,
-not substrate-enforced." Driver-mode optimizers (which route through `BudgetedClient`) are
-unaffected — `tests/test_budget.py` still proves the chokepoint enforces there.
 
 ## Summary
 
@@ -223,6 +187,7 @@ unaffected — `tests/test_budget.py` still proves the chokepoint enforces there
 | Live substrate | runt MCP, driven live | Coupling-without-restart is the thesis; batch executors are the named anti-pattern |
 | Loop contract | Protocol + per-optimizer adapter | Identical substrate code across optimizers proves generalization (SC-003) |
 | Optimizer state | State-agnostic contract | Hosts kernel-resident (GEPA) and on-disk (SkillOpt) shapes unchanged |
-| Budget | BudgetedClient wrapper + catch | One explicit chokepoint that halts cleanly, never silently overruns (FR-007) |
 | Eval-set integrity | Pin-and-warn on hash change | Surfaces drift (VI) without locking a host-owned knob (agent-autonomy) |
 | Inline artifacts | Rich repr via execute_cell | Zero new dependencies; satisfies "no dashboard" |
+
+*(Decision 4 / Budget row removed — budget abstraction dropped for simplicity)*

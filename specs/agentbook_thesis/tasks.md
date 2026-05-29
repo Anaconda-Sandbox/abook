@@ -24,13 +24,13 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**⚠️ CRITICAL**: No user-story work begins until this phase is complete — every story depends on the loop contract, session, budget, and driver.
+**⚠️ CRITICAL**: No user-story work begins until this phase is complete — every story depends on the loop contract, session, and driver.
 
 - [X] T010 [P] Define the `Optimizer` Protocol (`rollout`/`evaluate`/`reflect`/`edit`/`gate`) plus `Trace` and `Reflection` types in `src/agentbook/contract.py`
-- [X] T011 [P] Implement `Budget` + `BudgetedClient` (call/spend counter at the single chokepoint, raises `BudgetExhausted` at the cap) in `src/agentbook/budget.py`
+- [-] T011 (removed — budget abstraction dropped for simplicity)
 - [X] T012 Implement `Session` (warm eval_set/model_client/candidates/frontier, eval-set content-hash pin, stable `kernel_pid`, `select_parent`, `record`, `best_candidate`) in `src/agentbook/session.py`
 - [X] T013 Implement the written-once `run_iteration` driver wiring the four arrows + gate, identical for every optimizer, in `src/agentbook/loop.py`
-- [X] T014 [P] Unit test: `BudgetedClient` counts calls and raises `BudgetExhausted` exactly at the cap in `tests/test_budget.py`
+- [-] T014 (removed — budget abstraction dropped for simplicity)
 
 **Checkpoint**: Substrate ready — adapters can be wired to the loop contract.
 
@@ -51,12 +51,12 @@
 
 ## Phase 4: User Story 2 — Outer-loop driver decides next experiment from live state (Priority: P1)
 
-**Goal**: After each iteration the host reads the live outcome (best score, frontier, latest diff) and changes one experiment knob without restarting the kernel; budget exhaustion halts cleanly with a partial result.
+**Goal**: After each iteration the host reads the live outcome (best score, frontier, latest diff) and changes one experiment knob without restarting the kernel.
 **Independent Test**: Two consecutive iterations where the host changes one knob between them based solely on the prior in-kernel result, with no kernel restart.
 
 - [X] T030 [US2] Add host-facing outcome accessors (best score, frontier snapshot, latest candidate diff) on `Session` in `src/agentbook/session.py`
-- [X] T031 [US2] Make `run_iteration` catch `BudgetExhausted`, return the best-so-far candidate, and mark the run partial in `src/agentbook/loop.py`
-- [X] T032 [P] [US2] Test: budget exhaustion mid-`reflect` halts the loop cleanly with a partial result, never overrunning (FR-007, SC-006) in `tests/test_budget.py`
+- [-] T031 (removed — budget abstraction dropped for simplicity)
+- [-] T032 (removed — budget abstraction dropped for simplicity)
 - [X] T033 [US2] Add a demo cell showing the host changing one experiment knob (e.g. temperature or candidate-pool size) between iterations with no kernel restart in `notebooks/gepa_demo.ipynb`
 
 **Checkpoint**: US1 + US2 both work — the outer loop steers the inner loop from live state.
@@ -92,7 +92,7 @@
 
 - [X] T060 [P] Confirm both demo notebooks carry a **Data sources** section citing real sources (no fabricated rows/scores — Constitution I) in `notebooks/gepa_demo.ipynb` and `notebooks/skillopt_demo.ipynb`
 - [X] T061 [P] Run `agentbook-fix` over both saved demo notebooks (post-edit hygiene) and commit the normalized output
-- [X] T062 Validate `quickstart.md` end-to-end against real LLM credentials from a fresh kernel; confirm one optimizer run is reproducible (SC-004) — quickstart API drift fixed; **live GEPA-on-Bedrock run in the runt kernel validated SC-004** (run #1 evolved a real candidate, scores recorded, best selected, reproducible via `notebooks/utils/demo.py`). Surfaced an SC-006 engine-mode budget gap (recorded in `research.md`)
+- [X] T062 Validate `quickstart.md` end-to-end against real LLM credentials from a fresh kernel; confirm one optimizer run is reproducible (SC-004) — quickstart API drift fixed; **live GEPA-on-Bedrock run in the runt kernel validated SC-004** (run #1 evolved a real candidate, scores recorded, best selected, reproducible via `notebooks/utils/demo.py`)
 - [X] T063 Run the full gate — `make lint`, `make mypy`, `make test` — and fix any findings (green under conda `./env`: ruff+mypy clean, 17 tests; also fixed `make setup` channel/extra drift)
 - [X] T064 Measure the warm-kernel host→next-experiment latency over `execute_cell` and assert it stays under 1s (SC-002) in `notebooks/gepa_demo.ipynb` (closes analyze A-001) — **measured live: 0.012 ms ≪ 1s** across two real GEPA runs in one warm kernel (PID stable)
 - [X] T065 [P] Record edge-case handling decisions — kernel-crash recovery, reflection-call rate-limit policy (retry/skip/surface), mid-run inner-LLM swap — or explicitly defer them post-MVP, in `specs/agentbook_thesis/research.md` (closes analyze A-005)
@@ -102,7 +102,7 @@
 ## Dependencies & Execution Order
 
 - **Setup (Phase 1)**: No dependencies.
-- **Foundational (Phase 2)**: Depends on Setup — **BLOCKS all user stories**. Within the phase: T010 + T011 are parallel; T012 needs T010+T011; T013 needs T010+T012; T014 needs T011.
+- **Foundational (Phase 2)**: Depends on Setup — **BLOCKS all user stories**. Within the phase: T010 ∥; T012 needs T010; T013 needs T010+T012.
 - **US1 (Phase 3)**: Depends on Foundational. T020 ∥, then T021 (needs T020+T013), then T022.
 - **US2 (Phase 4)**: Depends on Foundational; T033 builds on the US1 demo. T030/T031 touch session/loop; T032 ∥.
 - **US3 (Phase 5)**: Depends on Foundational and on the **T004 SkillOpt spike** passing (functionally independent of US1/US2). T040 ∥, then T041, then T042 ∥ and T043.
@@ -113,7 +113,7 @@
 
 ### MVP First (User Story 1 only)
 
-1. Complete Setup (T001–T003) + Foundational (T010–T014).
+1. Complete Setup (T001–T003) + Foundational (T010, T012, T013).
 2. Complete US1 (T020–T022).
 3. **STOP and VALIDATE**: run ≥10 GEPA iterations in one kernel; confirm stable PID and load-once (SC-001).
 4. Demo if ready.

@@ -62,8 +62,7 @@ class Optimizer(Protocol):
         ...
 
     def reflect(self, candidate: Any, traces: list[Trace]) -> Reflection:
-        """Inner LLM proposes an edit, informed by ``traces``. Every LLM call
-        passes through the BudgetedClient (FR-007)."""
+        """Inner LLM proposes an edit, informed by ``traces``."""
         ...
 
     def edit(self, reflection: Reflection) -> Any:

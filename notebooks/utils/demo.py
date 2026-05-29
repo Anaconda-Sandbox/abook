@@ -10,16 +10,13 @@ from typing import Any
 
 
 def build_gepa(trainset: Any, seed_artifact: dict[str, str], task_lm: str,
-               reflection_lm: str, max_calls: int) -> tuple[Any, Any]:
-    """Wire a budget-guarded Session + GepaOptimizer over the system-prompt slice."""
+               reflection_lm: str) -> tuple[Any, Any]:
+    """Wire a Session + GepaOptimizer over the system-prompt slice."""
     from agentbook.adapters.gepa_adapter import GepaOptimizer
-    from agentbook.budget import Budget, BudgetedClient
     from agentbook.session import Session
 
-    budget = Budget(max_calls=max_calls)
-    # engine-mode placeholder: gepa calls Bedrock itself; the wrapper records usage uniformly
-    client = BudgetedClient(lambda *_a, **_k: None, budget)
-    session = Session(eval_set=trainset, model_client=client,
+    # engine-mode placeholder: gepa calls the LLM itself via litellm
+    session = Session(eval_set=trainset, model_client=lambda *_a, **_k: None,
                       slice_kind="system_prompt", seed_artifact=seed_artifact)
     opt = GepaOptimizer(session, task_lm=task_lm, reflection_lm=reflection_lm)
     return session, opt
@@ -61,7 +58,7 @@ def run_gepa_demo(trainset: Any, valset: Any, seed_artifact: dict[str, str], *,
     the SC-001 PID-stability check. The notebook calls this and renders the result inline.
     """
     pid = os.getpid()
-    session, opt = build_gepa(trainset, seed_artifact, task_lm, reflection_lm, max_metric_calls)
+    session, opt = build_gepa(trainset, seed_artifact, task_lm, reflection_lm)
 
     r1 = run_gepa(opt, trainset, valset, max_metric_calls=max_metric_calls,
                   reflection_minibatch_size=reflection_minibatch_size, seed=0)

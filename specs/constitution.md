@@ -69,9 +69,9 @@ Push intelligence up into markdown/skill artifacts; push execution down into nar
 
 ### VI. Explicit Over Implicit
 
-Function behaviour MUST be predictable from its signature. Side effects MUST be documented and minimized. The harness slice under evolution, the LLM-call budget, and the eval set MUST be explicitly declared at session setup — never inferred or silently mutated mid-run.
+Function behaviour MUST be predictable from its signature. Side effects MUST be documented and minimized. The harness slice under evolution and the eval set MUST be explicitly declared at session setup — never inferred or silently mutated mid-run. Any per-run call or spend limits are declared at session setup when used, but no specific budget abstraction is required.
 
-**Rationale**: An optimization loop is only trustworthy if its inputs are pinned. Silent drift in the eval set or budget invalidates every cross-iteration comparison.
+**Rationale**: An optimization loop is only trustworthy if its inputs are pinned. Silent drift in the eval set invalidates every cross-iteration comparison.
 
 ## Quality Gates
 

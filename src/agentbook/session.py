@@ -1,10 +1,10 @@
 """Session — the warm kernel state held across iterations.
 
-Loaded once per session (FR-003): the eval set, the budgeted model client, and
-the candidate population. The inner loop never mutates session *config* (eval-set
-identity, slice kind, budget) — those are host-set at setup and changed only
-between sessions (Constitution II, FR-008). Drift in the eval set is surfaced
-loudly, never silently (research Decision 5).
+Loaded once per session (FR-003): the eval set, the model client, and the
+candidate population. The inner loop never mutates session *config* (eval-set
+identity, slice kind) — those are host-set at setup and changed only between
+sessions (Constitution II, FR-008). Drift in the eval set is surfaced loudly,
+never silently (research Decision 5).
 
 See ``specs/agentbook_thesis/data-model.md``.
 """
@@ -19,7 +19,6 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
-from agentbook.budget import BudgetedClient
 from agentbook.contract import Trace
 
 
@@ -81,7 +80,7 @@ class Session:
 
     Args:
         eval_set: examples to score against (or a raw list, wrapped in EvalSet).
-        model_client: the budgeted inner-loop client.
+        model_client: the inner-loop model client (any callable).
         slice_kind: the one declared harness slice under evolution this run
             (e.g. ``"system_prompt"``); immutable for the run (Constitution II.2).
         seed_artifact: the starting artifact for the seed candidate.
@@ -90,7 +89,7 @@ class Session:
     def __init__(
         self,
         eval_set: EvalSet | list[Any],
-        model_client: BudgetedClient,
+        model_client: Any,
         slice_kind: str,
         seed_artifact: Any,
     ) -> None:
@@ -98,15 +97,10 @@ class Session:
         self.model_client = model_client
         self.slice_kind = slice_kind
         self.kernel_pid = os.getpid()
-        self.partial = False
         self._next_id = 0
         self.candidates: list[Candidate] = []
         self.iterations: list[Iteration] = []
         self.add_candidate(seed_artifact, parent=None)
-
-    @property
-    def budget(self) -> Any:
-        return self.model_client.budget
 
     # --- candidate lifecycle -------------------------------------------------
 
@@ -143,9 +137,6 @@ class Session:
         )
         self.iterations.append(it)
         return it
-
-    def mark_partial(self) -> None:
-        self.partial = True
 
     # --- host-facing outcome accessors (T030, FR-009) ------------------------
 

@@ -4,7 +4,7 @@ GEPA owns its own optimization loop (``gepa.optimize`` runs rollout → evaluate
 reflect → edit internally and reports progress through a ``GEPACallback``). This
 adapter does not drive GEPA arrow-by-arrow; it runs the real engine and **maps
 GEPA's callback events and result onto the substrate's Session entities** so the
-run renders inline (FR-005) and the budget is recorded uniformly (FR-007).
+run renders inline (FR-005).
 
 State is kernel-resident: GEPA's candidate population lives as Python objects in
 the live kernel for the whole run (FR-003, SC-001).
@@ -75,7 +75,7 @@ class GepaOptimizer:
     """Engine-mode adapter for GEPA (system-prompt slice, kernel-resident state).
 
     Args:
-        session: the live substrate session (holds the seed candidate, budget).
+        session: the live substrate session (holds the seed candidate).
         task_lm: litellm model string for the task model (e.g. a Bedrock model).
         reflection_lm: litellm model string for GEPA's reflection model.
     """
@@ -126,7 +126,7 @@ class GepaOptimizer:
         return self.result
 
     def _sync_session(self, result: Any) -> None:
-        """Map GEPA's result onto Session entities and record budget usage."""
+        """Map GEPA's result onto Session entities."""
         # Record the best discovered candidate so Session.best_candidate / latest_diff work.
         seed = self.session.candidates[0]
         best = result.best_candidate
@@ -138,8 +138,6 @@ class GepaOptimizer:
             self.session.iterations.append(
                 _iteration(index=ev["iteration"], parent=seed, child=child, n=ev["num_candidates"])
             )
-        # Budget: GEPA's max_metric_calls is the cap; record actual usage uniformly (FR-007).
-        self.session.budget.calls_used = int(getattr(result, "total_metric_calls", 0))
 
     def event_frame(self) -> Any:
         """Return the captured events as a pandas DataFrame for inline display."""

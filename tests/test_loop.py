@@ -2,16 +2,14 @@
 
 Covers the parts of T022 / T032 / T043 that need no external library or live
 kernel: stable PID and load-once (SC-001), in-memory failed-trace introspection
-(FR-004), clean partial halt on budget exhaustion (FR-007/SC-006), and the
-no-self-rewrite invariant (C-6/FR-008). The live-kernel halves of those tasks
-run in the GEPA/SkillOpt notebook phases.
+(FR-004), and the no-self-rewrite invariant (C-6/FR-008). The live-kernel halves
+of those tasks run in the GEPA/SkillOpt notebook phases.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from agentbook.budget import Budget, BudgetedClient
 from agentbook.contract import Optimizer, Reflection, Trace
 from agentbook.loop import run_iteration
 from agentbook.session import Session
@@ -21,7 +19,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 class FakeOptimizer:
     """Evolves a system-prompt string; longer prompt scores higher, so each
-    reflection is accepted by the gate. ``reflect`` consumes one budgeted call."""
+    reflection is accepted by the gate. ``reflect`` calls the model client."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -40,7 +38,7 @@ class FakeOptimizer:
         return {t.eval_id: (t.score or 0.0) for t in traces}
 
     def reflect(self, candidate: str, traces: list[Trace]) -> Reflection:
-        self.session.model_client("propose an edit")  # budgeted inner-LLM call
+        self.session.model_client("propose an edit")  # inner-LLM call
         return Reflection(from_candidate_id=candidate, proposed_artifact=candidate + " Think step by step.")
 
     def edit(self, reflection: Reflection) -> str:
@@ -50,10 +48,12 @@ class FakeOptimizer:
         return child.mean_score >= parent.mean_score  # type: ignore[attr-defined]
 
 
-def _make_session(max_calls: int = 100) -> Session:
-    client = BudgetedClient(lambda _p: "ok", Budget(max_calls=max_calls))
+def _make_session() -> Session:
     return Session(
-        eval_set=["q1", "q2", "q3"], model_client=client, slice_kind="system_prompt", seed_artifact="Solve it."
+        eval_set=["q1", "q2", "q3"],
+        model_client=lambda _p: "ok",
+        slice_kind="system_prompt",
+        seed_artifact="Solve it.",
     )
 
 
@@ -82,16 +82,6 @@ def test_failed_trace_is_queryable_in_memory() -> None:
     run_iteration(opt, session)
     failed = [t for t in opt.last_traces if t.failed]
     assert failed and failed[0].eval_id == "0"  # FR-004: in-memory, queryable
-
-
-def test_budget_exhaustion_halts_clean_with_partial() -> None:
-    session = _make_session(max_calls=2)
-    opt = FakeOptimizer(session)
-    results = [run_iteration(opt, session) for _ in range(4)]
-    assert session.partial is True  # halted cleanly
-    assert results[-1].partial is True
-    assert session.budget.calls_used == 2  # never exceeded the cap (FR-007)
-    assert session.best_candidate() is not None  # best-so-far preserved
 
 
 def test_host_outcome_accessors() -> None:

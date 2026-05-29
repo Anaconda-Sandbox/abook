@@ -111,9 +111,8 @@ class SkillOptOptimizer:
     def sync_from_disk(self, out_root: str | Path) -> dict[str, Any]:
         """Map a completed SkillOpt run directory onto the Session (no LLM needed).
 
-        Adds the best skill document as a candidate (child of the seed), records one
-        Iteration per training step from ``history.json``, and credits the budget with
-        the run's call count from ``summary.json``.
+        Adds the best skill document as a candidate (child of the seed) and records one
+        Iteration per training step from ``history.json``.
         """
         out_root = Path(out_root)
         summary: dict[str, Any] = json.loads((out_root / "summary.json").read_text())
@@ -136,11 +135,6 @@ class SkillOptOptimizer:
                 )
             )
 
-        calls = 0
-        token_summary = summary.get("token_summary") or {}
-        if isinstance(token_summary, dict):
-            calls = int(token_summary.get("calls", 0) or 0)
-        self.session.budget.calls_used = calls
         return summary
 
     def _best_skill_text(self, out_root: Path, summary: dict[str, Any]) -> str:
