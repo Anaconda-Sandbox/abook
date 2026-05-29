@@ -1,0 +1,11 @@
+[
+  {
+    "type": "message",
+    "turn": 1,
+    "content": "<answer>Santa Clara, California</answer>"
+  },
+  {
+    "role": "system",
+    "content": "[EVALUATION RESULT]\nQuestion: What city did Super Bowl 50 take place in?\nPredicted answer: 'Santa Clara, California'\nGold answers: ['Santa Clara']\nExact Match: 0.0\nF1: 0.8000"
+  }
+]

@@ -1,4 +1,9 @@
 name: agentbook-dev
+# conda-forge (free, no auth) — the `defaults` channel routes through
+# repo.anaconda.cloud which requires Anaconda auth and 403s without it.
+channels:
+  - conda-forge
+  - nodefaults
 dependencies:
   - python>=3.10,<3.14
   # Dev deps

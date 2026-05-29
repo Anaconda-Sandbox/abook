@@ -118,3 +118,6 @@ trials/
 
 # transient GEPA run output (notebook 07)
 _gepa_run_*/
+
+# uv is not used — conda only (runt may regenerate this; keep it untracked)
+uv.lock

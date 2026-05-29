@@ -38,8 +38,8 @@ setup: ## Create or update the dev conda env from environment-dev.yml
 		echo "Environment not found. Creating…"; \
 		$(CONDA) env create -p $(ENV_NAME) -f environment-dev.yml; \
 	fi
-	@echo "Installing package in editable mode…"
-	$(PYTHON) -m pip install --no-deps -e .
+	@echo "Installing package + optimizer extras in editable mode…"
+	$(PYTHON) -m pip install -e ".[gepa]"
 	@echo "Done. Activate with: conda activate $(ENV_NAME)"
 
 clean-setup: ## Remove the dev conda env and all build artifacts (fresh start)

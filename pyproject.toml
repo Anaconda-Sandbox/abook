@@ -29,6 +29,20 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
 ]
+# Optimizer adapters + the gepa demo's kernel deps. The substrate core
+# (src/agentbook/{session,budget,contract,loop}.py) imports NONE of these —
+# only adapters/gepa_adapter.py does, lazily — so they are optional, installed
+# into the live kernel for the demo notebooks (via the runt MCP, or this extra).
+gepa = [
+    "gepa>=0.1.1",
+    "litellm>=1.86.2",
+    "boto3>=1.40",
+    "pandas>=2.3.3",
+    "datasets>=2.0.0",
+    "python-dotenv>=1.0",
+]
+# SkillOpt is a Microsoft Research repo (git install); pin the ref when wiring
+# the skill-document adapter. See specs/agentbook_thesis/research.md (Decision 2/3).
 
 [tool.hatch.build]
 exclude = ["tests/**", ".github/**", "Makefile"]
@@ -50,6 +64,8 @@ include = [
 target-version = "py310"
 line-length = 120
 src = ["src", "tests"]
+# Showcase/analysis notebooks are illustrative, not project code — don't lint/format them.
+extend-exclude = ["notebooks/analysis"]
 
 [tool.ruff.lint]
 select = [
