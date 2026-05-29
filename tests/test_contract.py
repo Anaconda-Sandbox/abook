@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from agentbook.adapters.skillopt_adapter import SkillOptOptimizer
 from agentbook.session import Session
 
@@ -73,6 +75,7 @@ def test_skillopt_sync_does_not_write_substrate() -> None:
 def test_gepa_adapter_integrates_with_no_substrate_changes() -> None:
     """SC-003: the GEPA (engine-mode) adapter wires to a Session the same way —
     only the slice and state shape differ. Construction needs the gepa lib."""
+    pytest.importorskip("gepa")  # optional extra: pip install .[gepa]
     from agentbook.adapters.gepa_adapter import GepaOptimizer
 
     session = _session({"system_prompt": "Solve it."}, "system_prompt")

@@ -115,4 +115,3 @@ make test          # adapter + loop unit tests
 
 **Cause**: a cell restarted the kernel (e.g. `restart_kernel`) or an unhandled crash.
 **Fix**: this violates SC-001 — investigate the crashing cell; the loop must run in one warm kernel.
-

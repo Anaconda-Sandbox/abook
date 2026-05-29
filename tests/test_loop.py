@@ -42,10 +42,10 @@ class FakeOptimizer:
         return Reflection(from_candidate_id=candidate, proposed_artifact=candidate + " Think step by step.")
 
     def edit(self, reflection: Reflection) -> str:
-        return reflection.proposed_artifact
+        return str(reflection.proposed_artifact)
 
     def gate(self, parent: object, child: object) -> bool:
-        return child.mean_score >= parent.mean_score  # type: ignore[attr-defined]
+        return bool(child.mean_score >= parent.mean_score)  # type: ignore[attr-defined]
 
 
 def _make_session() -> Session:

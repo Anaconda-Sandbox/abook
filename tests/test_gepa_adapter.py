@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import pytest
 
-from agentbook.adapters.gepa_adapter import GepaOptimizer
-from agentbook.session import Session
+pytest.importorskip("gepa")  # optional extra: pip install .[gepa]
+
+from agentbook.adapters.gepa_adapter import GepaOptimizer  # noqa: E402
+from agentbook.session import Session  # noqa: E402
 
 
 def _session(seed_artifact: object) -> Session:
-    return Session(eval_set=["x"], model_client=lambda *_a, **_k: None, slice_kind="system_prompt", seed_artifact=seed_artifact)
+    return Session(
+        eval_set=["x"], model_client=lambda *_a, **_k: None, slice_kind="system_prompt", seed_artifact=seed_artifact
+    )
 
 
 def test_seed_candidate_requires_component_dict() -> None:
