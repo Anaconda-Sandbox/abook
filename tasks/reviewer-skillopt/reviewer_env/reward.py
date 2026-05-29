@@ -15,6 +15,7 @@ Anti-cheat:
     the *deterministic* anti-cheat layer; an LLM trace-judge is layered on top in the
     notebook for subtle cases.
 """
+
 from __future__ import annotations
 
 LINE_TOL = 2
@@ -70,9 +71,7 @@ def reward(instance: dict, findings: list[dict]) -> dict:
         for fi, f in enumerate(findings):
             if fi in matched_findings:
                 continue
-            if abs(f["line"] - p["line"]) <= LINE_TOL and _cat_match(
-                p["category"], f.get("category", "")
-            ):
+            if abs(f["line"] - p["line"]) <= LINE_TOL and _cat_match(p["category"], f.get("category", "")):
                 matched_planted.add(pi)
                 matched_findings.add(fi)
                 break
@@ -83,9 +82,7 @@ def reward(instance: dict, findings: list[dict]) -> dict:
     f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
 
     lints = _trace_lints(instance, findings)
-    hard = int(
-        recall >= 1.0 and precision >= PRECISION_FLOOR and not lints
-    )
+    hard = int(recall >= 1.0 and precision >= PRECISION_FLOOR and not lints)
     missed = [planted[i] for i in range(len(planted)) if i not in matched_planted]
 
     return {
@@ -96,6 +93,6 @@ def reward(instance: dict, findings: list[dict]) -> dict:
         "caught": caught,
         "n_planted": len(planted),
         "n_findings": len(findings),
-        "missed": missed,            # what reflect uses to patch the skill
+        "missed": missed,  # what reflect uses to patch the skill
         "lints": lints,
     }

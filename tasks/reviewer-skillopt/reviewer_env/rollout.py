@@ -6,6 +6,7 @@ line-numbered code under review. Planted bugs are NEVER serialized into either p
 trajectory. Writes <out_dir>/predictions/<id>/{conversation.json, target_system_prompt.txt,
 target_user_prompt.txt} for run_minibatch_reflect, and returns RolloutResult dicts.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,8 +19,7 @@ from .prompts import build_system, build_user, parse_findings
 from .reward import reward
 
 
-def _write_prediction(out_dir: str, tid: str, system: str, user: str,
-                      assistant: str, rew: dict) -> None:
+def _write_prediction(out_dir: str, tid: str, system: str, user: str, assistant: str, rew: dict) -> None:
     # reflect reads <rollout_dir>/predictions/<id>/conversation.json
     pdir = os.path.join(out_dir, "predictions", tid)
     os.makedirs(pdir, exist_ok=True)
@@ -45,8 +45,7 @@ def _write_prediction(out_dir: str, tid: str, system: str, user: str,
         f.write(user)
 
 
-def process_one(item: dict, skill_content: str, out_dir: str,
-                max_completion_tokens: int, timeout: int) -> dict:
+def process_one(item: dict, skill_content: str, out_dir: str, max_completion_tokens: int, timeout: int) -> dict:
     tid = str(item["id"])
     system = build_system(skill_content)
     user = build_user(item["code"])
@@ -54,8 +53,10 @@ def process_one(item: dict, skill_content: str, out_dir: str,
     assistant = ""
     try:
         assistant, _usage = chat_target(
-            system=system, user=user,
-            max_completion_tokens=max_completion_tokens, timeout=timeout,
+            system=system,
+            user=user,
+            max_completion_tokens=max_completion_tokens,
+            timeout=timeout,
         )
     except Exception as exc:  # network/CLI failure -> scored as a failed rollout
         error = f"{type(exc).__name__}: {exc}"
@@ -71,9 +72,7 @@ def process_one(item: dict, skill_content: str, out_dir: str,
         elif rew["lints"]:
             fail_reason = f"degenerate findings ({rew['lints']})"
         elif rew["missed"]:
-            fail_reason = "missed categories: " + ", ".join(
-                sorted({m["category"] for m in rew["missed"]})
-            )
+            fail_reason = "missed categories: " + ", ".join(sorted({m["category"] for m in rew["missed"]}))
         else:
             fail_reason = f"precision below floor ({rew['precision']})"
 
@@ -96,15 +95,19 @@ def process_one(item: dict, skill_content: str, out_dir: str,
     }
 
 
-def run_reviewer_batch(items: list[dict], skill_content: str, out_dir: str,
-                       workers: int = 4, max_completion_tokens: int = 4096,
-                       timeout: int = 120) -> list[dict]:
+def run_reviewer_batch(
+    items: list[dict],
+    skill_content: str,
+    out_dir: str,
+    workers: int = 4,
+    max_completion_tokens: int = 4096,
+    timeout: int = 120,
+) -> list[dict]:
     os.makedirs(out_dir, exist_ok=True)
     results: list[dict] = [None] * len(items)  # type: ignore[list-item]
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         futs = {
-            ex.submit(process_one, it, skill_content, out_dir,
-                      max_completion_tokens, timeout): i
+            ex.submit(process_one, it, skill_content, out_dir, max_completion_tokens, timeout): i
             for i, it in enumerate(items)
         }
         for fut in as_completed(futs):

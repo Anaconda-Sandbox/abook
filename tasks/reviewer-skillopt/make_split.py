@@ -8,6 +8,7 @@ candidates/reviewer/gen_instances.py and writes each split as a single JSON arra
     python make_reviewer_split.py --pool /tmp/_revpool --out data/reviewer_split \
         --train 12 --val 6 --test 12 --seed 7
 """
+
 from __future__ import annotations
 
 import argparse

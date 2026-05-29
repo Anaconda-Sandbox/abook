@@ -5,6 +5,7 @@ invariants from specs/skillopt-skill-optimization/spec.md:
   FR-004 — ground truth never enters the agent's prompt.
   FR-005 — degenerate (spam) findings are deterministically zeroed by a trace-lint.
 """
+
 import json
 import os
 import sys

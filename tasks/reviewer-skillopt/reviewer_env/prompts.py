@@ -3,6 +3,7 @@
 No skillopt / network dependency — importable standalone (e.g. by the FR-004 contract
 test) so the GT-free-prompt guarantee can be checked without installing skillopt.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,9 +24,7 @@ def build_system(skill_content: str) -> str:
 
 
 def build_user(code: str) -> str:
-    numbered = "\n".join(
-        f"{i:>4}  {line}" for i, line in enumerate(code.splitlines(), start=1)
-    )
+    numbered = "\n".join(f"{i:>4}  {line}" for i, line in enumerate(code.splitlines(), start=1))
     return "# Module under review (line-numbered)\n```python\n" + numbered + "\n```\n"
 
 

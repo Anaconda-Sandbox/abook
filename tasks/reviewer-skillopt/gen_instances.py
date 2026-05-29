@@ -12,6 +12,7 @@ is real Python and the bugs are real defects.
 Usage:
     python gen_instances.py --out instances --n 60 --seed 42
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,22 +25,12 @@ CATALOG: list[dict] = [
     {
         "category": "mutable_default_arg",
         "bug_line": 1,
-        "src": (
-            "def collect(item, acc=[]):\n"
-            "    acc.append(item)\n"
-            "    return acc\n"
-        ),
+        "src": ("def collect(item, acc=[]):\n    acc.append(item)\n    return acc\n"),
     },
     {
         "category": "bare_except",
         "bug_line": 3,
-        "src": (
-            "def load(path):\n"
-            "    try:\n"
-            "        return open(path).read()\n"
-            "    except:\n"
-            "        return None\n"
-        ),
+        "src": ("def load(path):\n    try:\n        return open(path).read()\n    except:\n        return None\n"),
     },
     {
         "category": "off_by_one",
@@ -64,74 +55,42 @@ CATALOG: list[dict] = [
     {
         "category": "resource_leak",
         "bug_line": 2,
-        "src": (
-            "def count_lines(path):\n"
-            "    f = open(path)\n"
-            "    n = sum(1 for _ in f)\n"
-            "    return n\n"
-        ),
+        "src": ("def count_lines(path):\n    f = open(path)\n    n = sum(1 for _ in f)\n    return n\n"),
     },
     {
         "category": "is_none_comparison",
         "bug_line": 2,
-        "src": (
-            "def is_empty(x):\n"
-            "    if x == None:\n"
-            "        return True\n"
-            "    return len(x) == 0\n"
-        ),
+        "src": ("def is_empty(x):\n    if x == None:\n        return True\n    return len(x) == 0\n"),
     },
     {
         "category": "unhandled_keyerror",
         "bug_line": 2,
-        "src": (
-            "def greet(cfg):\n"
-            "    return 'hello ' + cfg['username']\n"
-        ),
+        "src": ("def greet(cfg):\n    return 'hello ' + cfg['username']\n"),
     },
     {
         "category": "integer_division",
         "bug_line": 2,
-        "src": (
-            "def mean(xs):\n"
-            "    return sum(xs) // len(xs)\n"
-        ),
+        "src": ("def mean(xs):\n    return sum(xs) // len(xs)\n"),
     },
     {
         "category": "shadowed_builtin",
         "bug_line": 1,
-        "src": (
-            "def tally(list):\n"
-            "    total = 0\n"
-            "    for x in list:\n"
-            "        total += x\n"
-            "    return total\n"
-        ),
+        "src": ("def tally(list):\n    total = 0\n    for x in list:\n        total += x\n    return total\n"),
     },
     {
         "category": "missing_return",
         "bug_line": 1,
-        "src": (
-            "def double_all(xs):\n"
-            "    result = [x * 2 for x in xs]\n"
-        ),
+        "src": ("def double_all(xs):\n    result = [x * 2 for x in xs]\n"),
     },
     {
         "category": "division_by_zero",
         "bug_line": 2,
-        "src": (
-            "def ratio(a, b):\n"
-            "    return a / b\n"
-        ),
+        "src": ("def ratio(a, b):\n    return a / b\n"),
     },
     {
         "category": "type_confusion",
         "bug_line": 2,
-        "src": (
-            "def add_id(record, new_id):\n"
-            "    record['ids'] += new_id\n"
-            "    return record\n"
-        ),
+        "src": ("def add_id(record, new_id):\n    record['ids'] += new_id\n    return record\n"),
     },
 ]
 
@@ -145,9 +104,7 @@ def build_instance(rng: random.Random, k: int) -> dict:
     for snip in picks:
         offset = len(lines)  # snippet's first line is at absolute index offset+1
         lines.extend(snip["src"].splitlines(keepends=True))
-        planted.append(
-            {"line": offset + snip["bug_line"], "category": snip["category"]}
-        )
+        planted.append({"line": offset + snip["bug_line"], "category": snip["category"]})
         lines.append("\n")  # blank separator
     return {"code": "".join(lines), "bugs": planted}
 

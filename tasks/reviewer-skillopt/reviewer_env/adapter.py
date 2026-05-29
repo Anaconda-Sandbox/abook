@@ -4,6 +4,7 @@ Optimizes a code-review SKILL.md against planted-bug recall. Reflect + patch + s
 are SkillOpt's own code; this adapter supplies rollout + the reflect entrypoint only.
 Driven by constructing `ReflACTTrainer(cfg, adapter)` directly — no SkillOpt repo edits.
 """
+
 from __future__ import annotations
 
 import json
@@ -98,8 +99,11 @@ class SkillsBenchReviewerAdapter(EnvAdapter):
             if existing:
                 return existing
         results = run_reviewer_batch(
-            items=items, skill_content=skill_content, out_dir=out_dir,
-            workers=self.workers, max_completion_tokens=self.max_completion_tokens,
+            items=items,
+            skill_content=skill_content,
+            out_dir=out_dir,
+            workers=self.workers,
+            max_completion_tokens=self.max_completion_tokens,
             timeout=self.exec_timeout,
         )
         with open(results_path, "w") as f:
@@ -108,17 +112,21 @@ class SkillsBenchReviewerAdapter(EnvAdapter):
         return results
 
     # ── reflect ──────────────────────────────────────────────────────────────
-    def reflect(self, results: list[dict], skill_content: str, out_dir: str,
-                **kwargs) -> list[dict | None]:
+    def reflect(self, results: list[dict], skill_content: str, out_dir: str, **kwargs) -> list[dict | None]:
         prediction_dir = kwargs.get("prediction_dir", os.path.join(out_dir, "predictions"))
         patches_dir = kwargs.get("patches_dir", os.path.join(out_dir, "patches"))
-        return run_minibatch_reflect(
-            results=results, skill_content=skill_content,
-            prediction_dir=prediction_dir, patches_dir=patches_dir,
-            workers=self.analyst_workers, failure_only=self.failure_only,
-            minibatch_size=self.minibatch_size, edit_budget=self.edit_budget,
+        patches: list[dict | None] = run_minibatch_reflect(
+            results=results,
+            skill_content=skill_content,
+            prediction_dir=prediction_dir,
+            patches_dir=patches_dir,
+            workers=self.analyst_workers,
+            failure_only=self.failure_only,
+            minibatch_size=self.minibatch_size,
+            edit_budget=self.edit_budget,
             random_seed=kwargs.get("random_seed"),
             step_buffer_context=kwargs.get("step_buffer_context", ""),
             meta_skill_context=kwargs.get("meta_skill_context", ""),
             update_mode=getattr(self, "_cfg", {}).get("skill_update_mode", "patch"),
         )
+        return patches

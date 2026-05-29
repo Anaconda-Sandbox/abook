@@ -8,6 +8,7 @@ checker, not reporting optimization results.)
     weak   : reports only ~half (misses some categories) -> expect mid soft, hard=0
     spam   : reports every line as a bug                  -> expect lint-flagged, hard=0
 """
+
 from __future__ import annotations
 
 import json
@@ -38,7 +39,7 @@ def main() -> None:
     files = sorted(inst_dir.glob("rev_*.json"))
     if not files:
         sys.exit("no instances — run: python gen_instances.py --out instances --n 60")
-    agg = {"oracle": [], "weak": [], "spam": []}
+    agg: dict[str, list] = {"oracle": [], "weak": [], "spam": []}
     spam_lints = 0
     for f in files:
         inst = json.loads(f.read_text())
@@ -56,13 +57,14 @@ def main() -> None:
     print(f"{'reviewer':8} {'soft':>6} {'recall':>7} {'prec':>6} {'hard%':>6}")
     for name, rs in agg.items():
         hard_pct = round(100 * sum(r["hard"] for r in rs) / len(rs))
-        print(f"{name:8} {mean(rs,'soft'):>6} {mean(rs,'recall'):>7} "
-              f"{mean(rs,'precision'):>6} {hard_pct:>5}%")
+        print(f"{name:8} {mean(rs, 'soft'):>6} {mean(rs, 'recall'):>7} {mean(rs, 'precision'):>6} {hard_pct:>5}%")
     print(f"\nspam runs caught by trace-lint: {spam_lints}/{len(files)}")
 
-    ok = (mean(agg["oracle"], "soft") > 0.95
-          and mean(agg["weak"], "soft") < mean(agg["oracle"], "soft")
-          and spam_lints == len(files))
+    ok = (
+        mean(agg["oracle"], "soft") > 0.95
+        and mean(agg["weak"], "soft") < mean(agg["oracle"], "soft")
+        and spam_lints == len(files)
+    )
     print("\nDISCRIMINATES + ANTI-CHEAT:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 
