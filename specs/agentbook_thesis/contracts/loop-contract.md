@@ -49,12 +49,15 @@ supports **two** integration modes against the same loop *concept*:
 
 1. **Driver mode** — the optimizer exposes the four arrows; the substrate's written-once
    `run_iteration` (below) orchestrates them. Best for simple/custom optimizers. The Phase-2
-   tests exercise this mode with a `FakeOptimizer`.
+   tests exercise this mode with a `FakeOptimizer`. `ClaudeAgentOptimizer`
+   (`src/agentbook/adapters/claude_agent_adapter.py`) is the first real (non-fake) driver-mode
+   adapter: its rollout is a multi-turn tool-using agent invoked via `claude -p`, validating
+   the driver-mode path end-to-end.
 2. **Engine mode** — the optimizer owns its loop (e.g. `gepa.optimize(...)`), running
    rollout→evaluate→reflect→edit *internally*. The adapter does not drive it; instead it
    **maps the library's progress events (callbacks) onto the substrate entities**
    (`Candidate`/`Trace`/`Iteration`/`Frontier`) so they render inline.
-   GEPA integrates this way.
+   GEPA and SkillOpt both integrate this way.
 
 What generalizes across both (and what SC-003 actually asserts) is the **substrate**: the live
 kernel, the MCP cell-op surface, and the shared entity/observation model — *not* a single loop

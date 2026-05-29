@@ -99,6 +99,19 @@
 
 ---
 
+## Phase 8: User Story 5 — Agentic rollout (Priority: P3)
+
+**Goal**: Prove the `Trace`/`Optimizer` contract carries multi-turn tool-using agent trajectories, and that the written-once `run_iteration` driver works in driver mode for a real (non-fake) optimizer.
+**Independent Test**: `ClaudeAgentOptimizer` completes one `run_iteration`; at least one trace has `num_turns > 1` and a non-empty `tool_calls` list in `signals` (SC-008).
+
+- [X] T070 [P] [US5] Implement `ClaudeAgentOptimizer` and `parse_stream_json` (the `claude -p --output-format stream-json` transcript parser) in `src/agentbook/adapters/claude_agent_adapter.py`; satisfies the `Optimizer` Protocol in driver mode (first real driver-mode adapter)
+- [X] T071 [P] [US5] Offline tests exercising `parse_stream_json` against a minimal synthetic inline stream-json transcript, `Optimizer` Protocol conformance, and scoring logic in `tests/test_claude_agent.py` (no real `claude -p` calls — avoids environment leakage)
+- [X] T072 [US5] Build the agentic evolution demo (real `claude -p` Bedrock calls; tiny eval set of tool-forcing tasks with deterministic gold answers) in `notebooks/agentic_demo.ipynb`; includes a **Data sources** section citing real tool-call transcripts
+
+**Checkpoint**: US5 complete — driver-mode path validated end-to-end with a real multi-turn tool-using agent.
+
+---
+
 ## Dependencies & Execution Order
 
 - **Setup (Phase 1)**: No dependencies.
@@ -108,6 +121,7 @@
 - **US3 (Phase 5)**: Depends on Foundational and on the **T004 SkillOpt spike** passing (functionally independent of US1/US2). T040 ∥, then T041, then T042 ∥ and T043.
 - **US4 (Phase 6)**: Independent doc task; can start any time after the plan.
 - **Polish (Phase 7)**: Depends on all desired stories being complete. T064 needs the US1 demo (T021); T065 ∥.
+- **US5 (Phase 8)**: Depends on Foundational (Phase 2). T070 ∥ T071; T072 needs T070.
 
 ## Implementation Strategy
 

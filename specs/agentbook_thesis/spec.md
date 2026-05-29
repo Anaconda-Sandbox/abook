@@ -55,6 +55,46 @@ The substrate hosts one optimizer that evolves the system-prompt slice (referenc
 
 ---
 
+### User Story 5 — Agentic, tool-using rollout (Priority: P3)
+
+An agent engineer wants the substrate to host an optimizer whose rollout is a real
+multi-turn tool-using agent — not single-shot Q&A. The agent (a `claude -p` process)
+thinks, runs shell commands, reads the results, and answers; the resulting trajectory
+of `tool_use` / `tool_result` pairs, turn count, and cost is captured in a `Trace`
+and flows through the same `run_iteration` driver as any other optimizer. The slice
+under evolution is the system prompt (same slice as GEPA), but scoring is by task
+success on tool-forcing tasks with deterministic gold answers rather than free-form
+reasoning. The point is not a specific eval domain — it is proving that the
+`Trace`/`Optimizer` contract carries agentic trajectories, and that the same
+written-once `run_iteration` driver (driver mode) works end-to-end for a genuinely
+agentic rollout.
+
+**Why this priority**: US1–US3 prove the substrate works for single-turn LLM
+optimizers. US5 proves it extends to multi-turn tool-using agents without any
+substrate change — the contract absorbs the richer trajectory. This is also the first
+driver-mode adapter backed by a real (non-fake) optimizer, validating that path.
+
+**Independent Test**: Run the `ClaudeAgentOptimizer` through `run_iteration` on the
+small tool-forcing eval set. Confirm at least one trace carries `num_turns > 1` (real
+multi-turn interaction) and at least one `tool_use` / `tool_result` pair captured in
+`Trace.signals`. Confirm the substrate `run_iteration` code is unchanged from US1.
+
+**Acceptance Scenarios**:
+
+1. **Given** a `ClaudeAgentOptimizer` loaded into a session, **When** `run_iteration`
+   is called, **Then** the rollout shells out to `claude -p`, executes at least one
+   Bash tool call, and returns a `Trace` with `num_turns > 1` and tool-call pairs in
+   `signals`.
+2. **Given** a failed trace (task answer does not match gold), **When** the reflect
+   step reads that trace, **Then** it rewrites the system prompt based on the failure
+   trajectory captured in `signals`, and the gate accepts or rejects the child
+   candidate by score comparison against the parent.
+3. **Given** the same `run_iteration` driver used for GEPA, **When** it is called with
+   a `ClaudeAgentOptimizer`, **Then** no driver code is modified — the driver is
+   written once and is identical for both.
+
+---
+
 ### User Story 4 — Documented graduation criteria for leaving the kernel (Priority: P3)
 
 When the workload outgrows interactive iteration — memory fan-out across many candidates, sub-100ms per-call latency, multi-tenant serving — the project does not wrap notebooks in headless batch executors. The documented path is to port the hot path to a compiled service and let the notebook stay a notebook.
@@ -94,6 +134,7 @@ When the workload outgrows interactive iteration — memory fan-out across many 
 - **FR-009**: After each iteration the host MUST be able to read the iteration's outcome (best score, frontier, latest diff) from the live session and use it to decide the next experiment; edits to agentbook itself MUST happen between sessions, justified by a recorded inner-loop result.
 - **FR-010**: The substrate MUST support at least two independent optimizer libraries under the same loop contract, each targeting a different harness slice (reference slices: system prompt, skill document), and MUST accommodate both kernel-resident and on-disk optimizer state without bespoke harness code per optimizer.
 - **FR-011**: The project MUST document the measurable conditions (memory fan-out, latency floor, concurrency level) under which the hot path is to be ported out of the kernel to a compiled service rather than wrapped in batch executors.
+- **FR-012**: The substrate MUST support a driver-mode optimizer whose rollout is a multi-turn tool-using agent, with the agent's tool calls (names, inputs, outputs), turn count, cost, and token usage captured in the `Trace.signals` field and available to the reflect step without re-parsing any file.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -130,3 +171,4 @@ When the workload outgrows interactive iteration — memory fan-out across many 
 - **SC-007**: Within a documented evaluation window, the outer loop produces at least one merged edit to agentbook itself (library code, skill document, or optimizer wiring) justified by a recorded inner-loop result — demonstrating the harness genuinely self-evolves rather than merely hosting an optimizer.
 
 *(SC-006 removed — budget abstraction dropped for simplicity)*
+- **SC-008**: An agentic rollout via `ClaudeAgentOptimizer` completes with `num_turns > 1` and at least one real tool call captured per successful trace (i.e., `Trace.signals` contains a non-empty `tool_calls` list for that trace).
