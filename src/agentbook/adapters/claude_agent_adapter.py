@@ -114,7 +114,7 @@ def run_agent(
     task_prompt: str,
     *,
     system_prompt: str | None = None,
-    model: str = "claude-haiku-4-5",
+    model: str = "claude-sonnet-4-6",
     allowed_tools: tuple[str, ...] = ("Bash",),
     max_turns: int = 6,
     timeout: int = 120,
@@ -152,7 +152,7 @@ class ClaudeAgentOptimizer:
     """
 
     def __init__(
-        self, session: Session, *, model: str = "claude-haiku-4-5", reflect_model: str = "claude-sonnet-4-6"
+        self, session: Session, *, model: str = "claude-sonnet-4-6", reflect_model: str = "claude-sonnet-4-6"
     ) -> None:
         self.session = session
         self.model = model
