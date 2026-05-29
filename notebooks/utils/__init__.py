@@ -6,6 +6,7 @@ root is found by walking up for a marker file rather than hardcoding a path.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -37,3 +38,23 @@ def bootstrap(load_env: bool = True) -> Path:
             # best-effort: python-dotenv is optional; the kernel env may already be set
             pass
     return root
+
+
+def skillopt_run_dir() -> Path:
+    """SkillOpt demo run directory (on-disk state for the log-EDA demo).
+
+    Defaults to the committed fixture so the demo runs from a fresh clone with no
+    external setup. Override with ``$SKILLOPT_RUN`` to point at a live run dir.
+    """
+    env = os.environ.get("SKILLOPT_RUN")
+    return Path(env) if env else repo_root() / "tests" / "fixtures" / "skillopt_run"
+
+
+def skillopt_root() -> Path:
+    """SkillOpt checkout root — only needed for a *live* training run, not log-EDA.
+
+    Override with ``$SKILLOPT_ROOT``; defaults to a sibling ``SkillOpt-src`` checkout
+    next to this repo. Not dereferenced when the demo only reads an on-disk run.
+    """
+    env = os.environ.get("SKILLOPT_ROOT")
+    return Path(env) if env else repo_root().parent / "SkillOpt-src"
