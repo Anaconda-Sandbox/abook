@@ -24,3 +24,7 @@ repos:
       - id: mypy
         additional_dependencies: []
         args: [--ignore-missing-imports]
+        # tasks/ holds standalone runner scripts (outside the typed src/tests
+        # scope); several share basenames across slices, which mypy rejects as
+        # duplicate top-level modules.
+        exclude: ^tasks/

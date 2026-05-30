@@ -79,6 +79,21 @@ judge layer enabled and the deterministic structural reward unchanged.
   agent behaves agentically and answers about its own session instead of reviewing the code
   (observed in the first run). This is the operational half of FR-004.
 
+#### Slice 2 — `specify` (structural reward ⊕ LLM trace-judge)
+- **FR-014**: The `specify` slice MUST optimize a deliberately-weak spec-writing `SKILL.md`;
+  the rollout writes a full spec for a feature brief (the brief only — never a reference spec).
+- **FR-015**: The reward MUST blend a **deterministic structural** score (required sections,
+  `FR-`/`SC-` ids, `MUST` usage, measurable success criteria, no impl leakage) with an
+  **LLM trace-judge** score covering what structure cannot see — whether each requirement is
+  genuinely *testable*, whether the spec *covers the brief*, and whether success criteria are
+  *outcome-level*. Blend: `soft = 0.5·structural + 0.5·judge_overall`.
+- **FR-016**: The LLM trace-judge MUST run on **every** rollout (not a sample) — its tokens are
+  small relative to the spec-writing rollout. A hard pass requires structural-hard AND
+  `judge_overall ≥ 0.7`.
+- **FR-017**: The judge MUST be reference-free (no gold spec); the held-out **test** split
+  (FR-006/007) remains the anti-overfitting guard. The reflect trajectory MUST carry BOTH the
+  failed structural checks AND the judge feedback, so the skill learns structure *and* testability.
+
 ### Key Entities
 - **Slice**: the single skill under evolution (reviewer `SKILL.md`).
 - **Instance**: a source file with planted bugs (train or test); GT held by the harness.
@@ -107,3 +122,7 @@ judge layer enabled and the deterministic structural reward unchanged.
   both are acceptable outcomes; a silently train-only "win" is not.
 - **SC-005**: The evolved skill diff is human-auditable and attributable to specific
   missed-bug categories from the train traces.
+- **SC-006** (specify slice): The `specify` smoke runs end-to-end through the real trainer with
+  the trace-judge enabled, and at least one rollout shows the **judge** down-scoring a spec on
+  `testable`/`coverage`/`outcome` that the **structural** reward alone passed — demonstrating the
+  judge adds signal the deterministic checker cannot (per FR-015/FR-016).
