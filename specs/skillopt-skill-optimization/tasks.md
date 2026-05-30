@@ -38,11 +38,15 @@
 - [X] T022 [US3] `rollout.py` — reward = structural ⊕ judge; trajectory carries both signals (FR-017)
 - [X] T023 [US3] vendor structural `reward.py`; `gen_instances.py` + `make_split.py` (5/2/3)
 - [X] T024 [US3] no-API wiring check (judge parse, structural, blend, adapter import) — PASS
-- [ ] T025 [US3] `run_smoke.py` real run → `jobs/specify-skillopt-<date>/` (~$1.5, ~10 min)
-- [ ] T026 [US3] `notebooks/specify_skillopt.ipynb` — analysis; show judge catching a spec the
-      structural reward passed (SC-006); helpers in `utils/`
+- [X] T025 [US3] `run_smoke.py` real run → `jobs/specify-skillopt-2026-05-29/` — completed: 33 calls,
+      40,966 tokens, 412.7s; gate rejected (honest null, test soft 0.945→0.932)
+- [X] T026 [US3] `notebooks/specify_skillopt.ipynb` — analysis; judge catches all 3 held-out specs the
+      structural reward passed (SC-006: structural_soft=1.00 vs judge_overall≈0.88–0.91); helpers in
+      `notebooks/utils/skillopt_analysis.py` (`sc006_evidence`)
 
 ## Definition of done
 - Reviewer (smoke): SC-000 + SC-002 + SC-003 + SC-005 — ✅ done (PR #9).
-- Specify (smoke): SC-006 — judge adds signal beyond structural on a real run.
+- Specify (smoke): SC-006 — ✅ done. Judge adds signal beyond structural on the real run
+  (`jobs/specify-skillopt-2026-05-29/`): 3/3 held-out specs pass structure (1.00) yet the judge
+  down-scores testability/outcome. Demonstrated in `notebooks/specify_skillopt.ipynb`.
 - Scale to SC-001 only on user go-ahead.
